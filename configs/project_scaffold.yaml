@@ -1,0 +1,27 @@
+run_name: project_scaffold
+project:
+  name: personalization-experimentation-platform
+  domain: content_feed_personalization
+  base_dataset: mind
+  product_story: Feed / Content Personalization + Experimentation Platform for Session-Level Engagement Optimization
+modules:
+  - data
+  - retrieval
+  - ranking
+  - reranking
+  - experiments
+  - evaluation
+real_world_constraints:
+  - freshness
+  - diversity
+  - fatigue
+  - creator_spread
+  - cold_start
+  - position_bias
+  - offline_online_gap
+  - guardrail_metrics
+phases:
+  - phase_1_event_log_foundation
+  - phase_2_baseline_personalization_stack
+  - phase_3_experimentation_layer
+  - phase_4_delivery_polish

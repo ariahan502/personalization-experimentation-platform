@@ -1,0 +1,32 @@
+# virtual env
+.venv/
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+
+# data
+data/raw/
+data/interim/
+data/processed/
+data/samples/
+!data/fixtures/
+!data/fixtures/**
+
+# artifacts
+/artifacts/
+
+# safeguard tracked package code from broad ignore patterns
+!src/
+!src/personalization_platform/
+!src/personalization_platform/**
+src/personalization_platform/**/__pycache__/
+src/personalization_platform/**/*.pyc
+
+# local planning
+doc/
+
+# mac
+.DS_Store

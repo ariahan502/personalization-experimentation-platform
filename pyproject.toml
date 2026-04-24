@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personalization-experimentation-platform"
+version = "0.1.0"
+description = "Reproducible offline feed personalization and experimentation pipelines."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "numpy",
+  "pandas",
+  "pyarrow",
+  "pydantic",
+  "pyyaml",
+  "scikit-learn",
+  "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit",
+  "pytest",
+]
+
+[project.scripts]
+personalization-show-blueprint = "personalization_platform.pipeline.show_blueprint:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
