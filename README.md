@@ -39,6 +39,39 @@ This project treats personalization as a decision system rather than a single mo
 - Treat offline metrics as pre-launch signals, not proof of product impact.
 - Make constraints such as freshness, diversity, fatigue, and creator spread first-class design inputs.
 
+## Why This Is Distinct From The Ads Project
+
+This repository is meant to complement, not duplicate, the ads attribution project.
+
+- The ads project focuses on acquisition-side decisioning: attribution, uplift diagnostics, policy simulation, and budget-oriented decision support.
+- This project focuses on onsite engagement decisioning: candidate generation, feed ranking, reranking constraints, and experiment-driven product optimization.
+- Both projects are decision systems, but they answer different business questions:
+  - ads: which external traffic or campaigns create value
+  - personalization: how internal feed inventory should be selected, ordered, constrained, and validated
+
+Together, they are intended to show breadth across acquisition, engagement, offline modeling, and experimentation rather than repeating the same workflow in two repos.
+
+## End-To-End Standard
+
+This project is intended to be an end-to-end, code-first system project rather than a notebook portfolio exercise.
+
+- reusable logic should live under `src/personalization_platform/`
+- changeable settings should live under `configs/`
+- entrypoints should run from `personalization_platform.pipeline`
+- outputs should be written as reproducible artifact bundles under `artifacts/runs/`
+- notebooks may still be used for exploration, but they are not the source of truth for production-style logic
+
+The intended end-to-end flow is:
+
+1. build a request-level event-log surface from MIND-derived inputs
+2. generate multi-source candidates
+3. train and evaluate a baseline ranker
+4. apply explicit reranking constraints
+5. assign experiments deterministically and analyze treatment results
+6. emit monitoring, reporting, and optional local serving artifacts
+
+The repo is not fully end-to-end yet. Today it validates the scaffold and the first schema contract. It becomes truly end-to-end once the event-log, retrieval, ranking, reranking, and experimentation commands all run from config and produce connected artifact bundles.
+
 ## System Scope
 
 The target architecture is organized into six modules:
@@ -65,12 +98,14 @@ What exists today:
 - local execution plan workspace under `doc/`
 - package layout under `src/personalization_platform/`
 - a minimal config-driven scaffold command for repository validation
+- first event-log schema contract for requests, impressions, user state, and item state
+- config-driven schema contract validation command that writes an artifact bundle
 
 What comes next:
 
-- Phase 1 baseline event-log build from MIND and a first retrieval-plus-ranking path
-- Phase 2 reranking constraints and policy diagnostics
-- Phase 3 experimentation framework and experiment readout
+- Phase 1 minimal event-log build from MIND smoke inputs
+- Phase 2 first retrieval-plus-ranking path
+- Phase 3 reranking constraints plus experimentation framework and readout
 - Phase 4 monitoring, delivery polish, and portfolio-ready reporting
 
 ## Repository Layout
@@ -149,6 +184,38 @@ with:
 - `project_summary.json`
 
 This command validates that the package, config loader, artifact writing path, and baseline repo structure are wired correctly.
+
+The repo also includes a schema-contract command for the first event-log slice:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.describe_event_log_schema --config configs/event_log_schema.yaml
+```
+
+This writes a run bundle under `artifacts/runs/<timestamp>_event_log_schema/` with:
+
+- `config.yaml`
+- `schema_contract.json`
+- `schema_summary.json`
+
+This command validates the first-pass schema contract that downstream MIND conversion, retrieval, ranking, and experimentation tickets will build against.
+
+A human-readable version of the contract lives in [src/personalization_platform/data/event_log_schema_contract.md](/Users/hanlingjuan/personalization-experimentation-platform/src/personalization_platform/data/event_log_schema_contract.md).
+
+The repo also includes config contracts for the future event-log build:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.validate_event_log_config --config configs/mind_smoke.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.validate_event_log_config --config configs/mind_full.yaml
+```
+
+These configs make the event-log input contract explicit:
+
+- `input.source_mode` distinguishes smoke fixtures from raw MIND inputs
+- `smoke_fixture.root_dir` defines the local smoke path under `data/fixtures/`
+- `raw_input.root_dir` defines the raw dataset path under `data/raw/`
+- `output.base_dir` defines where event-log tables should land
+- `artifacts.base_dir` defines where run bundles should be written
+- `validation.require_existing_inputs` controls whether future commands should fail fast on missing input paths
 
 ## Delivery Philosophy
 

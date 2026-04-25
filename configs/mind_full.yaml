@@ -1,0 +1,32 @@
+run_name: mind_full_config_validation
+
+input:
+  dataset: mind
+  source_mode: raw_mind
+  split: train
+
+smoke_fixture:
+  root_dir: data/fixtures/mind_smoke
+  files:
+    behaviors: behaviors.tsv
+    news: news.tsv
+
+raw_input:
+  root_dir: data/raw/MINDlarge_train
+  files:
+    behaviors: behaviors.tsv
+    news: news.tsv
+
+output:
+  base_dir: data/interim/event_logs
+  tables:
+    - requests
+    - impressions
+    - user_state
+    - item_state
+
+artifacts:
+  base_dir: artifacts/runs
+
+validation:
+  require_existing_inputs: false

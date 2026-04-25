@@ -1,0 +1,12 @@
+run_name: event_log_schema
+artifact_base_dir: artifacts/runs
+
+schema_contract:
+  version: v1
+  source_dataset: mind
+  focus: first_smoke_slice
+  tables:
+    - requests
+    - impressions
+    - user_state
+    - item_state
