@@ -217,6 +217,18 @@ These configs make the event-log input contract explicit:
 - `artifacts.base_dir` defines where run bundles should be written
 - `validation.require_existing_inputs` controls whether future commands should fail fast on missing input paths
 
+The first smoke event-log build command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.build_event_log --config configs/mind_smoke.yaml
+```
+
+This command reads the raw-like smoke fixture inputs, writes first-pass `requests`, `impressions`, `user_state`, and `item_state` tables under `data/interim/event_logs/<run_name>/`, and writes a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

@@ -22,7 +22,7 @@ Smoke fixture design:
 
 - raw-like MIND inputs rather than already-converted event-log tables
 - 2 users across 6 requests
-- 3 inferred sessions using visible timestamp gaps
+- 4 inferred sessions using visible timestamp gaps
 - 3 candidate impressions per request
 - a mix of clicked and non-clicked items
 - 6 items spanning multiple topics to exercise diversity and cold-start joins

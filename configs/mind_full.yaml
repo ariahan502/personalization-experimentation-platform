@@ -1,4 +1,5 @@
 run_name: mind_full_config_validation
+event_log_run_name: mind_full_event_log
 
 input:
   dataset: mind
