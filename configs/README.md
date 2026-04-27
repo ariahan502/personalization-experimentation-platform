@@ -26,3 +26,7 @@ Schema and event-log foundation configs:
 Retrieval configs:
 
 - `candidates_smoke.yaml`
+
+Ranking configs:
+
+- `ranking_dataset_smoke.yaml`

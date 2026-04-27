@@ -241,6 +241,18 @@ This command reads the latest smoke event-log outputs, builds merged multi-sourc
 - `metrics.json`
 - `manifest.json`
 
+The first smoke ranking-dataset command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.build_ranking_dataset --config configs/ranking_dataset_smoke.yaml
+```
+
+This command reads the latest smoke event-log and candidate outputs, writes one row per request-item candidate pair under `data/processed/ranking_dataset/<run_name>/`, and emits a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:
