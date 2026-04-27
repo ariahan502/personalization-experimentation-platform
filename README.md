@@ -235,7 +235,7 @@ The first smoke candidate-generation command is:
 PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_smoke.yaml
 ```
 
-This command reads the latest smoke event-log outputs, writes request-level trending candidates under `data/processed/candidates/<run_name>/`, and emits a run bundle with:
+This command reads the latest smoke event-log outputs, builds merged multi-source candidates from affinity plus trending retrieval, writes request-level candidates under `data/processed/candidates/<run_name>/`, and emits a run bundle with:
 
 - `config.yaml`
 - `metrics.json`

@@ -1,36 +1,38 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+from personalization_platform.retrieval.common import load_event_log_inputs
+
 
 def build_trending_candidates(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
-    event_log_dir = resolve_event_log_dir(config)
-    requests = pd.read_csv(event_log_dir / "requests.csv")
-    impressions = pd.read_csv(event_log_dir / "impressions.csv")
-    user_state = pd.read_csv(event_log_dir / "user_state.csv")
-
-    requests["request_ts"] = pd.to_datetime(requests["request_ts"])
-    impression_request_ts = requests[["request_id", "request_ts"]].rename(
-        columns={"request_ts": "request_ts_lookup"}
-    )
-    impressions = impressions.merge(impression_request_ts, on="request_id", how="left")
-
-    history_lookup = {
-        row.request_id: set(json.loads(row.history_item_ids))
-        for row in user_state.itertuples(index=False)
-    }
-    clicked_lookup = (
-        impressions.loc[impressions["clicked"] == 1, ["request_id", "item_id"]]
-        .groupby("request_id")["item_id"]
-        .agg(list)
-        .to_dict()
-    )
-
+    event_log_inputs = load_event_log_inputs(config)
     candidate_count = config["retrieval"]["candidate_count"]
+    candidates = build_trending_source_candidates(
+        event_log_inputs=event_log_inputs,
+        candidate_count=candidate_count,
+    )
+    metrics = build_trending_metrics(
+        candidates=candidates,
+        requests=event_log_inputs["requests"],
+        clicked_lookup=event_log_inputs["clicked_lookup"],
+        event_log_dir=event_log_inputs["event_log_dir"],
+        candidate_count=candidate_count,
+    )
+    return candidates, metrics
+
+
+def build_trending_source_candidates(
+    *,
+    event_log_inputs: dict[str, Any],
+    candidate_count: int,
+) -> pd.DataFrame:
+    requests = event_log_inputs["requests"]
+    impressions = event_log_inputs["impressions"]
+    history_lookup = event_log_inputs["history_lookup"]
     candidate_rows: list[dict[str, Any]] = []
 
     requests_sorted = requests.sort_values("request_ts")
@@ -74,27 +76,7 @@ def build_trending_candidates(config: dict[str, Any]) -> tuple[pd.DataFrame, dic
                 }
             )
 
-    candidates = pd.DataFrame(candidate_rows)
-    metrics = build_trending_metrics(
-        candidates=candidates,
-        requests=requests,
-        clicked_lookup=clicked_lookup,
-        event_log_dir=event_log_dir,
-        candidate_count=candidate_count,
-    )
-    return candidates, metrics
-
-
-def resolve_event_log_dir(config: dict[str, Any]) -> Path:
-    retrieval_input = config["input"]
-    base_dir = Path(retrieval_input["event_log_base_dir"])
-    run_name = retrieval_input["event_log_run_name"]
-    matches = sorted(base_dir.glob(f"*_{run_name}"))
-    if not matches:
-        raise FileNotFoundError(
-            f"No event-log outputs found under {base_dir} matching '*_{run_name}'."
-        )
-    return matches[-1]
+    return pd.DataFrame(candidate_rows)
 
 
 def build_trending_metrics(
