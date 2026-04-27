@@ -229,6 +229,18 @@ This command reads the raw-like smoke fixture inputs, writes first-pass `request
 - `metrics.json`
 - `manifest.json`
 
+The first smoke candidate-generation command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_smoke.yaml
+```
+
+This command reads the latest smoke event-log outputs, writes request-level trending candidates under `data/processed/candidates/<run_name>/`, and emits a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

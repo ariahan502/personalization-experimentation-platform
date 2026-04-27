@@ -22,3 +22,7 @@ Schema and event-log foundation configs:
 - `event_log_schema.yaml`
 - `mind_smoke.yaml`
 - `mind_full.yaml`
+
+Retrieval configs:
+
+- `candidates_smoke.yaml`

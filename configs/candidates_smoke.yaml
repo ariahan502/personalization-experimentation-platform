@@ -1,0 +1,15 @@
+run_name: candidates_smoke
+
+input:
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_smoke_event_log
+
+retrieval:
+  source: trending
+  candidate_count: 3
+
+output:
+  base_dir: data/processed/candidates
+
+artifacts:
+  base_dir: artifacts/runs
