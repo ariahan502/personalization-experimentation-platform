@@ -1,0 +1,17 @@
+run_name: ranking_dataset_medium
+
+input:
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_medium_event_log
+  candidates_base_dir: data/processed/candidates
+  candidates_run_name: candidates_medium
+
+split:
+  strategy: tail_request_count
+  valid_request_count: 4
+
+output:
+  base_dir: data/processed/ranking_dataset
+
+artifacts:
+  base_dir: artifacts/runs

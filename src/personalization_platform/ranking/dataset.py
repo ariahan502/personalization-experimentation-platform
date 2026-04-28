@@ -67,11 +67,7 @@ def build_ranking_dataset(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[st
     dataset["candidate_seen_in_impressions"] = (dataset["observed_position"] > 0).astype(int)
     dataset["request_hour"] = dataset["request_ts"].dt.hour
 
-    unique_request_ts = sorted(dataset["request_ts"].unique())
-    valid_cutoff = unique_request_ts[-1]
-    dataset["dataset_split"] = dataset["request_ts"].map(
-        lambda ts: "valid" if ts == valid_cutoff else "train"
-    )
+    dataset["dataset_split"] = assign_dataset_splits(dataset=dataset, config=config)
 
     dataset = dataset.sort_values(["request_ts", "request_id", "merged_rank", "item_id"]).reset_index(drop=True)
     dataset["request_ts"] = dataset["request_ts"].dt.strftime("%Y-%m-%dT%H:%M:%S")
@@ -128,8 +124,37 @@ def resolve_candidates_dir(config: dict[str, Any]) -> Path:
     return matches[-1]
 
 
+def assign_dataset_splits(*, dataset: pd.DataFrame, config: dict[str, Any]) -> pd.Series:
+    split_config = config.get("split", {})
+    strategy = split_config.get("strategy", "latest_timestamp_bucket")
+
+    if strategy == "latest_timestamp_bucket":
+        unique_request_ts = sorted(dataset["request_ts"].unique())
+        valid_cutoff = unique_request_ts[-1]
+        return dataset["request_ts"].map(lambda ts: "valid" if ts == valid_cutoff else "train")
+
+    if strategy == "tail_request_count":
+        valid_request_count = int(split_config.get("valid_request_count", 1))
+        if valid_request_count <= 0:
+            raise ValueError("Config field 'split.valid_request_count' must be positive for tail_request_count.")
+
+        request_order = (
+            dataset[["request_id", "request_ts"]]
+            .drop_duplicates()
+            .sort_values(["request_ts", "request_id"])
+            .reset_index(drop=True)
+        )
+        if len(request_order) <= valid_request_count:
+            raise ValueError("tail_request_count must leave at least one training request.")
+        valid_request_ids = set(request_order.tail(valid_request_count)["request_id"].tolist())
+        return dataset["request_id"].map(lambda request_id: "valid" if request_id in valid_request_ids else "train")
+
+    raise ValueError(f"Unsupported ranking dataset split strategy '{strategy}'.")
+
+
 def build_ranking_dataset_metrics(*, dataset: pd.DataFrame, candidates_dir: Path) -> dict[str, Any]:
     split_counts = dataset["dataset_split"].value_counts().to_dict()
+    split_request_counts = dataset.groupby("dataset_split")["request_id"].nunique().to_dict()
     label_rate = float(dataset["label"].mean()) if not dataset.empty else 0.0
     return {
         "dataset_name": "ranking_dataset",
@@ -140,6 +165,7 @@ def build_ranking_dataset_metrics(*, dataset: pd.DataFrame, candidates_dir: Path
         "positive_labels": int(dataset["label"].sum()),
         "positive_rate": label_rate,
         "split_counts": {key: int(value) for key, value in split_counts.items()},
+        "split_request_counts": {key: int(value) for key, value in split_request_counts.items()},
         "primary_source_counts": {
             key: int(value) for key, value in dataset["candidate_source"].value_counts().to_dict().items()
         },
@@ -151,12 +177,23 @@ def build_ranking_dataset_metrics(*, dataset: pd.DataFrame, candidates_dir: Path
 
 
 def build_ranking_dataset_manifest(*, config: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
+    split_config = config.get("split", {})
+    strategy = split_config.get("strategy", "latest_timestamp_bucket")
+    if strategy == "tail_request_count":
+        split_logic = (
+            f"The last {int(split_config.get('valid_request_count', 1))} requests in time order are assigned to validation; "
+            "earlier requests are train."
+        )
+    else:
+        split_logic = (
+            "The most recent request timestamp bucket in the smoke dataset is assigned to validation; earlier rows are train."
+        )
     return {
         "dataset_name": "ranking_dataset",
         "row_grain": "One row per request-item candidate pair.",
         "candidate_input_dir": metrics["candidate_input_dir"],
         "label_definition": "Binary click label joined from impressions; non-clicked or unserved candidates receive label 0.",
-        "split_logic": "The most recent request timestamp bucket in the smoke dataset is assigned to validation; earlier rows are train.",
+        "split_logic": split_logic,
         "feature_groups": {
             "candidate_ordering": ["merged_rank", "normalized_merged_rank", "merged_score", "source_rank"],
             "provenance": [
@@ -186,7 +223,7 @@ def build_ranking_dataset_manifest(*, config: dict[str, Any], metrics: dict[str,
         },
         "assumptions": [
             "The first baseline ranking dataset keeps only explainable hand-built features from retrieval provenance and request context.",
-            "The smoke split logic is time-ordered within the tiny fixture and is intended for reproducibility rather than statistical rigor.",
+            "The split logic is time-ordered and is intended for reproducibility rather than statistical rigor.",
             "Candidates that were not part of the original impression list remain valid negative examples with label 0 in this first slice.",
         ],
         "config_snapshot": config,

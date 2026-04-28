@@ -13,6 +13,7 @@ from personalization_platform.ranking.logistic_baseline import (
 
 def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     baseline_config = build_baseline_config(config)
+    comparison_name = config.get("run_name", "ranker_compare")
     baseline_metrics, scored_rows, baseline_manifest = train_logistic_baseline(baseline_config)
     baseline_rows = scored_rows.loc[scored_rows["dataset_split"] == "valid"].copy()
 
@@ -29,7 +30,7 @@ def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, A
     )
 
     comparison_metrics = {
-        "comparison_name": "ranker_compare_smoke",
+        "comparison_name": comparison_name,
         "ranking_dataset_input_dir": logistic_metrics["ranking_dataset_input_dir"],
         "variants": {
             "logistic_regression_baseline": logistic_metrics,
@@ -153,8 +154,8 @@ def build_diagnostics(
         },
         "comparison_notes": [
             "The fallback baseline uses retrieval order only, scored as inverse merged rank.",
-            "Smoke comparison is intended to verify the evaluation bundle shape rather than establish a reliable model winner.",
-            "Offline gains on this tiny fixture should be treated as plumbing checks, not shipment evidence.",
+            "This comparison is intended to verify the evaluation bundle shape rather than establish a reliable model winner by itself.",
+            "Offline gains on a local validation slice should be treated as directional evidence, not shipment evidence.",
         ],
         "baseline_feature_manifest": baseline_manifest["top_feature_weights"][:5],
         "metric_deltas": comparison_metrics["metric_deltas"],

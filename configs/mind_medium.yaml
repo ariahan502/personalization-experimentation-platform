@@ -1,0 +1,34 @@
+run_name: mind_medium_config_validation
+event_log_run_name: mind_medium_event_log
+
+input:
+  dataset: mind
+  source_mode: smoke_fixture
+  split: train
+  row_limit: 200
+
+smoke_fixture:
+  root_dir: data/fixtures/mind_medium
+  files:
+    behaviors: behaviors.tsv
+    news: news.tsv
+
+raw_input:
+  root_dir: data/raw/MINDsmall_train
+  files:
+    behaviors: behaviors.tsv
+    news: news.tsv
+
+output:
+  base_dir: data/interim/event_logs
+  tables:
+    - requests
+    - impressions
+    - user_state
+    - item_state
+
+artifacts:
+  base_dir: artifacts/runs
+
+validation:
+  require_existing_inputs: false

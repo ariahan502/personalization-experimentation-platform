@@ -1,0 +1,21 @@
+run_name: candidates_medium
+
+input:
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_medium_event_log
+
+retrieval:
+  candidate_count: 5
+  sources:
+    - name: affinity
+      candidate_count: 4
+      priority: 1
+    - name: trending
+      candidate_count: 4
+      priority: 2
+
+output:
+  base_dir: data/processed/candidates
+
+artifacts:
+  base_dir: artifacts/runs

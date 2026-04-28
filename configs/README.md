@@ -21,17 +21,22 @@ Schema and event-log foundation configs:
 
 - `event_log_schema.yaml`
 - `mind_smoke.yaml`
+- `mind_medium.yaml`
 - `mind_full.yaml`
 
 Retrieval configs:
 
 - `candidates_smoke.yaml`
+- `candidates_medium.yaml`
 
 Ranking configs:
 
 - `ranking_dataset_smoke.yaml`
+- `ranking_dataset_medium.yaml`
 - `ranker_smoke.yaml`
+- `ranker_medium.yaml`
 - `ranker_compare_smoke.yaml`
+- `ranker_compare_medium.yaml`
 
 Reranking configs:
 

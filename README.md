@@ -136,6 +136,17 @@ PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_repor
 
 The first command validates the local ranked-feed replay API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
 
+For a richer offline validation slice than the tiny smoke path, the repo also includes a medium fixture path:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.build_event_log --config configs/mind_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_ranking_dataset --config configs/ranking_dataset_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_medium.yaml
+```
+
+This medium path keeps the same local, reproducible workflow but provides more requests and a larger time-ordered validation holdout for retrieval and ranking diagnostics.
+
 ## Commands
 
 The repo includes a minimal scaffold validation command:
