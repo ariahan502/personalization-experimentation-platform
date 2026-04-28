@@ -27,6 +27,7 @@ src/personalization_platform/**/*.pyc
 
 # local planning
 doc/
+AGENTS.md
 
 # mac
 .DS_Store

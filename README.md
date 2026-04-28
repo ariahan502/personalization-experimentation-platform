@@ -2,66 +2,28 @@
 
 This repository is a reproducible, config-driven personalization and experimentation system for a content feed.
 
-The project is designed around a realistic product question:
+The project implements a full offline workflow for feed ranking:
 
-- given a user session and a candidate set of content items, which items should the feed rank and show
-- how should ranking interact with freshness, diversity, fatigue, and creator-spread constraints
-- how should offline model changes be validated before and after an A/B experiment
+- build request-level event logs from raw interaction inputs
+- generate candidates from multiple retrieval sources
+- train and compare a baseline ranker
+- apply explicit reranking constraints
+- assign and analyze experiments
+- emit monitoring, API replay, and reporting artifacts
 
-The repository implements an offline-first personalization stack with the same major layers that appear in production feed systems:
+The current raw interaction source is `MIND`, the Microsoft News Dataset. In this repo, it is used to construct a request-level ranking workflow with explicit retrieval, ranking, reranking, experimentation, and delivery stages.
 
-- event and session preparation
-- candidate generation
-- ranking and reranking
-- experiment assignment
-- metric attribution and A/B analysis
-- reporting, monitoring, and run artifacts
+## Process
 
-The current raw data source is `MIND`, the Microsoft News Dataset. In this repo, MIND is treated as a realistic input source for building a request-level feed-ranking workflow rather than as a benchmark table used in isolation.
+The implementation follows a small-slice pipeline process:
 
-## Product Context
+- define a narrow contract for the next stage
+- add a config-backed entrypoint
+- run the stage against smoke inputs
+- write reproducible run bundles
+- connect that stage to the next downstream surface
 
-This project is framed around common feed-ranking problems:
-
-- new and light users do not have enough history for stable personalization
-- returning users can be over-served the same topic or creator
-- older high-CTR content can crowd out fresher content
-- offline ranking metrics can improve while session quality or long-click quality does not
-- teams need controlled experiments to know whether a new ranking treatment should ship
-
-The project treats personalization as a decision system rather than a single model-training task. The objective is to optimize session-level engagement under explicit operational constraints, with experimentation as the decision layer for model and policy changes.
-
-## Design Principles
-
-- Build a realistic product system, not a benchmark-only model showcase.
-- Keep the problem grounded in feed ranking and experimentation workflows that teams actually run.
-- Prefer small, validated slices over large speculative builds.
-- Treat offline metrics as pre-launch signals, not proof of product impact.
-- Make constraints such as freshness, diversity, fatigue, and creator spread first-class design inputs.
-
-## Why This Is Distinct From The Ads Project
-
-This repository is meant to complement, not duplicate, the ads attribution project.
-
-- The ads project focuses on acquisition-side decisioning: attribution, uplift diagnostics, policy simulation, and budget-oriented decision support.
-- This project focuses on onsite engagement decisioning: candidate generation, feed ranking, reranking constraints, and experiment-driven product optimization.
-- Both projects are decision systems, but they answer different business questions:
-  - ads: which external traffic or campaigns create value
-  - personalization: how internal feed inventory should be selected, ordered, constrained, and validated
-
-Together, they are intended to show breadth across acquisition, engagement, offline modeling, and experimentation rather than repeating the same workflow in two repos.
-
-## End-To-End Standard
-
-This project is implemented as an end-to-end, code-first system rather than an analysis notebook.
-
-- reusable logic should live under `src/personalization_platform/`
-- changeable settings should live under `configs/`
-- entrypoints should run from `personalization_platform.pipeline`
-- outputs should be written as reproducible artifact bundles under `artifacts/runs/`
-- notebooks may still be used for exploration, but they are not the source of truth for production-style logic
-
-The intended end-to-end flow is:
+The current end-to-end flow is:
 
 1. build a request-level event-log surface from feed-interaction inputs derived from MIND
 2. generate multi-source candidates
@@ -70,24 +32,7 @@ The intended end-to-end flow is:
 5. assign experiments deterministically and analyze treatment results
 6. emit monitoring, reporting, and optional local serving artifacts
 
-That end-to-end flow now exists in the repo as a smoke-validated path. The project can build the data surface, train and compare a baseline ranker, apply reranking policy logic, run experiment readouts, emit monitoring artifacts, replay ranked results through a local API, and package the results into a portfolio-facing report.
-
-## System Scope
-
-The target architecture is organized into six modules:
-
-1. `data`
-   Converts raw interaction inputs into request-level, session-aware event tables for downstream retrieval, ranking, and experimentation workflows.
-2. `retrieval`
-   Builds multi-source candidate sets such as trending, topic affinity, and history-based retrieval.
-3. `ranking`
-   Trains baseline rankers and produces personalized feed scores.
-4. `reranking`
-   Applies business and UX constraints such as freshness boosts, fatigue penalties, and creator caps.
-5. `experiments`
-   Handles deterministic bucketing, experiment configuration, guardrails, and A/B analysis.
-6. `evaluation`
-   Produces offline ranking metrics, strategy diagnostics, replay-style policy views, and experiment readouts.
+Each stage is implemented as package code under `src/personalization_platform/`, configured through `configs/`, and validated by writing artifact bundles under `artifacts/runs/`.
 
 ## Current Repo Status
 
@@ -102,12 +47,6 @@ What exists today:
 - local FastAPI demo surface for replaying ranked fixture requests
 - portfolio-facing reporting bundle with a system summary and architecture note
 - one-command repo smoke validation via `bash scripts/ci_smoke.sh`
-
-What this means:
-
-- the repo is now a coherent offline personalization system rather than a scaffold
-- every major layer is config-driven and writes reproducible run bundles
-- the current best validation path exercises the whole stack from scaffold through reporting
 
 ## Repository Layout
 

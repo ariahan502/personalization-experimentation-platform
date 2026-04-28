@@ -15,6 +15,18 @@ The project will support data preparation, candidate generation, ranking, rerank
 - Keep operational constraints such as freshness, diversity, fatigue, and creator spread explicit.
 - Keep smoke paths self-contained so the repository can be validated without the full raw dataset.
 
+## Execution Pattern
+
+The project is built stage by stage:
+
+1. define a minimal contract for the next layer
+2. implement reusable package code under `src/personalization_platform/`
+3. add a config-backed pipeline entrypoint
+4. validate the stage on smoke inputs
+5. write artifact bundles that the next stage can consume
+
+This pattern is used across event-log preparation, retrieval, ranking, reranking, experimentation, monitoring, delivery, and reporting.
+
 ## Current Capabilities
 
 - Project scaffold aligned with a reproducible `src/` Python layout
