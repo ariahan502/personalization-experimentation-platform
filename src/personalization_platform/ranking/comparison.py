@@ -7,58 +7,95 @@ import pandas as pd
 
 from personalization_platform.ranking.logistic_baseline import (
     build_request_ranking_metrics,
-    train_logistic_baseline,
+    train_ranker_model,
 )
 
 
 def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    baseline_config = build_baseline_config(config)
+    variant_configs = build_variant_configs(config)
     comparison_name = config.get("run_name", "ranker_compare")
-    baseline_metrics, scored_rows, baseline_manifest = train_logistic_baseline(baseline_config)
-    baseline_rows = scored_rows.loc[scored_rows["dataset_split"] == "valid"].copy()
+    primary_variant_name = config.get("primary_variant_name", "logistic_regression_baseline")
 
-    fallback_rows = build_retrieval_order_baseline_rows(baseline_rows)
-    logistic_metrics = build_variant_metrics(
-        baseline_rows,
-        variant_name="logistic_regression_baseline",
-        dataset_input_dir=baseline_metrics["ranking_dataset_input_dir"],
-    )
+    variant_metrics: dict[str, dict[str, Any]] = {}
+    variant_rows: dict[str, pd.DataFrame] = {}
+    variant_manifests: dict[str, dict[str, Any]] = {}
+    dataset_input_dir: str | None = None
+
+    for variant_name, variant_config in variant_configs.items():
+        trained_metrics, scored_rows, manifest = train_ranker_model(variant_config)
+        valid_rows = scored_rows.loc[scored_rows["dataset_split"] == "valid"].copy()
+        dataset_input_dir = trained_metrics["ranking_dataset_input_dir"]
+        variant_rows[variant_name] = valid_rows
+        variant_manifests[variant_name] = manifest
+        variant_metrics[variant_name] = build_variant_metrics(
+            valid_rows,
+            variant_name=trained_metrics["model_name"],
+            dataset_input_dir=trained_metrics["ranking_dataset_input_dir"],
+        )
+
+    if dataset_input_dir is None:
+        raise ValueError("No model variants were configured for comparison.")
+
+    fallback_rows = build_retrieval_order_baseline_rows(next(iter(variant_rows.values())))
     fallback_metrics = build_variant_metrics(
         fallback_rows,
         variant_name="retrieval_order_baseline",
-        dataset_input_dir=baseline_metrics["ranking_dataset_input_dir"],
+        dataset_input_dir=dataset_input_dir,
     )
+    variant_rows["retrieval_order_baseline"] = fallback_rows
+    variant_metrics["retrieval_order_baseline"] = fallback_metrics
+
+    if primary_variant_name not in variant_metrics:
+        raise ValueError(
+            f"Configured primary_variant_name={primary_variant_name!r} was not produced. "
+            f"Available variants: {sorted(variant_metrics)}."
+        )
 
     comparison_metrics = {
         "comparison_name": comparison_name,
-        "ranking_dataset_input_dir": logistic_metrics["ranking_dataset_input_dir"],
-        "variants": {
-            "logistic_regression_baseline": logistic_metrics,
-            "retrieval_order_baseline": fallback_metrics,
-        },
+        "primary_variant_name": primary_variant_name,
+        "ranking_dataset_input_dir": dataset_input_dir,
+        "variants": variant_metrics,
         "metric_deltas": compute_metric_deltas(
-            candidate=logistic_metrics,
+            candidate=variant_metrics[primary_variant_name],
             baseline=fallback_metrics,
         ),
+        "variant_deltas_vs_retrieval": {
+            variant_name: compute_metric_deltas(candidate=metrics, baseline=fallback_metrics)
+            for variant_name, metrics in variant_metrics.items()
+            if variant_name != "retrieval_order_baseline"
+        },
     }
     diagnostics = build_diagnostics(
-        logistic_rows=baseline_rows,
-        fallback_rows=fallback_rows,
-        baseline_manifest=baseline_manifest,
+        variant_rows=variant_rows,
+        variant_manifests=variant_manifests,
         comparison_metrics=comparison_metrics,
     )
     return comparison_metrics, diagnostics
 
 
-def build_baseline_config(config: dict[str, Any]) -> dict[str, Any]:
-    baseline_config = {
-        "input": dict(config["input"]),
-        "features": config["features"],
-        "model": config["model"],
-        "output": config.get("output", {}),
-        "artifacts": config.get("artifacts", {}),
-    }
-    return baseline_config
+def build_variant_configs(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    if "comparison_models" not in config:
+        return {
+            "logistic_regression_baseline": {
+                "input": dict(config["input"]),
+                "features": config["features"],
+                "model": {"model_type": "logistic_regression"} | dict(config["model"]),
+                "output": config.get("output", {}),
+                "artifacts": config.get("artifacts", {}),
+            }
+        }
+
+    variant_configs: dict[str, dict[str, Any]] = {}
+    for variant_name, model_config in config["comparison_models"].items():
+        variant_configs[variant_name] = {
+            "input": dict(config["input"]),
+            "features": config["features"],
+            "model": dict(model_config),
+            "output": config.get("output", {}),
+            "artifacts": config.get("artifacts", {}),
+        }
+    return variant_configs
 
 
 def build_retrieval_order_baseline_rows(rows: pd.DataFrame) -> pd.DataFrame:
@@ -134,30 +171,31 @@ def compute_metric_deltas(*, candidate: dict[str, Any], baseline: dict[str, Any]
 
 def build_diagnostics(
     *,
-    logistic_rows: pd.DataFrame,
-    fallback_rows: pd.DataFrame,
-    baseline_manifest: dict[str, Any],
+    variant_rows: dict[str, pd.DataFrame],
+    variant_manifests: dict[str, dict[str, Any]],
     comparison_metrics: dict[str, Any],
 ) -> dict[str, Any]:
+    primary_variant_name = comparison_metrics["primary_variant_name"]
     return {
         "calibration_summary": {
-            "logistic_regression_baseline": build_calibration_summary(logistic_rows),
-            "retrieval_order_baseline": build_calibration_summary(fallback_rows),
+            variant_name: build_calibration_summary(rows) for variant_name, rows in variant_rows.items()
         },
         "slice_summary": {
-            "logistic_regression_baseline": build_slice_summary(logistic_rows),
-            "retrieval_order_baseline": build_slice_summary(fallback_rows),
+            variant_name: build_slice_summary(rows) for variant_name, rows in variant_rows.items()
         },
         "top_scored_examples": {
-            "logistic_regression_baseline": select_top_examples(logistic_rows),
-            "retrieval_order_baseline": select_top_examples(fallback_rows),
+            variant_name: select_top_examples(rows) for variant_name, rows in variant_rows.items()
         },
         "comparison_notes": [
             "The fallback baseline uses retrieval order only, scored as inverse merged rank.",
-            "This comparison is intended to verify the evaluation bundle shape rather than establish a reliable model winner by itself.",
+            "The comparison bundle can score multiple model families against the same valid split and retrieval-order fallback.",
             "Offline gains on a local validation slice should be treated as directional evidence, not shipment evidence.",
         ],
-        "baseline_feature_manifest": baseline_manifest["top_feature_weights"][:5],
+        "baseline_feature_manifest": variant_manifests.get("logistic_regression_baseline", {}).get(
+            "top_feature_weights",
+            [],
+        )[:5],
+        "primary_variant_manifest": variant_manifests.get(primary_variant_name, {}),
         "metric_deltas": comparison_metrics["metric_deltas"],
     }
 

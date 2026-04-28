@@ -35,6 +35,7 @@ Ranking configs:
 - `ranking_dataset_medium.yaml`
 - `ranker_smoke.yaml`
 - `ranker_medium.yaml`
+- `ranker_tree_medium.yaml`
 - `ranker_compare_smoke.yaml`
 - `ranker_compare_medium.yaml`
 

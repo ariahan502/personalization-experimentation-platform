@@ -40,7 +40,7 @@ What exists today:
 
 - request-level event-log build from fixture-backed feed-interaction inputs
 - multi-source candidate generation using `affinity`, `content`, and `trending`
-- baseline ranking dataset, logistic ranker, and fallback comparison bundle
+- baseline ranking dataset, logistic and tree-based rankers, and comparison bundle
 - explicit reranking rules for freshness, topic diversity, and creator spread
 - deterministic experiment assignment plus offline readout with guardrails and SRM
 - monitoring bundle for funnel health, score stability, and experiment integrity
@@ -216,7 +216,7 @@ The first smoke candidate-generation command is:
 PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_smoke.yaml
 ```
 
-This command reads the latest smoke event-log outputs, builds merged multi-source candidates from affinity plus trending retrieval, writes request-level candidates under `data/processed/candidates/<run_name>/`, and emits a run bundle with:
+This command reads the latest smoke event-log outputs, builds merged multi-source candidates from affinity, content, and trending retrieval, writes request-level candidates under `data/processed/candidates/<run_name>/`, and emits a run bundle with:
 
 - `config.yaml`
 - `metrics.json`

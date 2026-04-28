@@ -8,7 +8,7 @@ import yaml
 
 from personalization_platform.ranking.logistic_baseline import (
     sanitize_metrics_for_json,
-    train_logistic_baseline,
+    train_ranker_model,
     write_model_pickle,
 )
 from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
@@ -33,7 +33,7 @@ def main() -> None:
     output_dir = Path(config["output"]["base_dir"]) / run_dir.name
     output_dir.mkdir(parents=True, exist_ok=False)
 
-    metrics, scored_rows, manifest = train_logistic_baseline(config)
+    metrics, scored_rows, manifest = train_ranker_model(config)
     model_artifacts = metrics["model_artifacts"]
     write_model_pickle(output_dir / "model.pkl", model_artifacts)
     scored_rows.to_csv(output_dir / "scored_rows.csv", index=False)
