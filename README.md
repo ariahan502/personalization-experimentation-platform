@@ -301,6 +301,18 @@ This command applies deterministic control-versus-treatment assignment on top of
 - `metrics.json`
 - `manifest.json`
 
+The first smoke experiment-analysis command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.analyze_experiment --config configs/experiment_analysis_smoke.yaml
+```
+
+This command reads the latest assignment outputs, writes an offline experiment readout bundle with primary metrics, guardrails, and SRM checks, and emits:
+
+- `config.yaml`
+- `summary.json`
+- `readout.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

@@ -1,0 +1,20 @@
+run_name: experiment_analysis_smoke
+
+input:
+  assignment_base_dir: data/processed/experiment_assignment
+  assignment_run_name: experiment_smoke
+
+experiment:
+  experiment_id: feed_rerank_policy_v1
+  treatments:
+    - treatment_id: control
+      treatment_name: control_ranker_only
+      weight: 0.5
+      is_control: true
+    - treatment_id: reranked_policy
+      treatment_name: reranked_feed_policy
+      weight: 0.5
+      is_control: false
+
+artifacts:
+  base_dir: artifacts/runs

@@ -40,3 +40,4 @@ Reranking configs:
 Experiment configs:
 
 - `experiment_smoke.yaml`
+- `experiment_analysis_smoke.yaml`
