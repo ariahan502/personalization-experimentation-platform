@@ -39,7 +39,7 @@ Each stage is implemented as package code under `src/personalization_platform/`,
 What exists today:
 
 - request-level event-log build from fixture-backed feed-interaction inputs
-- multi-source candidate generation using `affinity` plus `trending`
+- multi-source candidate generation using `affinity`, `content`, and `trending`
 - baseline ranking dataset, logistic ranker, and fallback comparison bundle
 - explicit reranking rules for freshness, topic diversity, and creator spread
 - deterministic experiment assignment plus offline readout with guardrails and SRM

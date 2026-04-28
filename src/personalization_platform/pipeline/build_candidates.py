@@ -10,6 +10,7 @@ import yaml
 
 from personalization_platform.retrieval.affinity import build_affinity_source_candidates
 from personalization_platform.retrieval.common import get_source_configs, load_event_log_inputs
+from personalization_platform.retrieval.content import build_content_source_candidates
 from personalization_platform.retrieval.trending import build_trending_manifest, build_trending_source_candidates
 from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
 
@@ -64,6 +65,11 @@ def build_candidates_bundle(
             )
         elif source_name == "affinity":
             frame = build_affinity_source_candidates(
+                event_log_inputs=event_log_inputs,
+                candidate_count=candidate_count,
+            )
+        elif source_name == "content":
+            frame = build_content_source_candidates(
                 event_log_inputs=event_log_inputs,
                 candidate_count=candidate_count,
             )
@@ -272,6 +278,7 @@ def build_multi_source_manifest(
         "assumptions": build_trending_manifest(config=config, metrics=metrics, output_dir=output_dir)["assumptions"]
         + [
             "Affinity candidates are scored from request-time visible topic history using item topics from item_state.",
+            "Content candidates are scored from request-time metadata similarity using topic, subcategory, publisher, creator, and title-token overlap from item_state.",
             "When multiple sources retrieve the same item, the merged row keeps the highest-priority source as candidate_source and preserves all contributing sources in source_details.",
             "Cold-start requests rely on trending fallback because affinity requires prior user history.",
         ],
