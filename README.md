@@ -313,6 +313,18 @@ This command reads the latest assignment outputs, writes an offline experiment r
 - `summary.json`
 - `readout.json`
 
+The first smoke monitoring command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.monitor_quality --config configs/monitoring_smoke.yaml
+```
+
+This command reads the latest smoke outputs across event-log, retrieval, ranking, reranking, and experiment analysis stages, and writes an offline monitoring bundle with:
+
+- `config.yaml`
+- `summary.json`
+- `diagnostics.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

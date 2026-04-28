@@ -1,0 +1,25 @@
+run_name: monitoring_smoke
+
+input:
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_smoke_event_log
+  candidate_base_dir: data/processed/candidates
+  candidate_run_name: candidates_smoke
+  ranking_dataset_base_dir: data/processed/ranking_dataset
+  ranking_dataset_run_name: ranking_dataset_smoke
+  ranker_base_dir: data/processed/ranker
+  ranker_run_name: ranker_smoke
+  rerank_base_dir: data/processed/reranked_feed
+  rerank_run_name: rerank_smoke
+  experiment_analysis_base_dir: artifacts/runs
+  experiment_analysis_run_name: experiment_analysis_smoke
+
+thresholds:
+  min_candidate_request_coverage: 0.8
+  max_candidate_source_mix_gap: 0.8
+  max_mean_prediction_gap: 0.5
+  max_average_rank_shift: 0.5
+  min_srm_p_value: 0.05
+
+artifacts:
+  base_dir: artifacts/runs
