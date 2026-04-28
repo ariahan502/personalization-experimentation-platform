@@ -1,0 +1,25 @@
+run_name: rerank_smoke
+
+input:
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_smoke_event_log
+  ranker_base_dir: data/processed/ranker
+  ranker_run_name: ranker_smoke
+
+reranking:
+  freshness_weight: 1.0
+  topic_repeat_penalty: 0.20
+  creator_repeat_penalty: 0.15
+  creator_map:
+    N101: creator_civic
+    N102: creator_sportswire
+    N103: creator_marketdesk
+    N104: creator_studio
+    N105: creator_studio
+    N106: creator_sportswire
+
+output:
+  base_dir: data/processed/reranked_feed
+
+artifacts:
+  base_dir: artifacts/runs

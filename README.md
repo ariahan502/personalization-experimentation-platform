@@ -277,6 +277,18 @@ This command compares the logistic baseline against a simple retrieval-order fal
 - `metrics.json`
 - `diagnostics.json`
 
+The first smoke reranking command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.rerank_feed --config configs/rerank_smoke.yaml
+```
+
+This command applies explicit freshness, diversity, and creator-spread rules to the scored feed rows, writes reranked outputs under `data/processed/reranked_feed/<run_name>/`, and emits a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:
