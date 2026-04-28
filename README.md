@@ -352,6 +352,20 @@ If you want to launch the server interactively instead of running the smoke chec
 PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml --serve
 ```
 
+The portfolio-facing reporting bundle can be generated with:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
+```
+
+This command reuses the latest smoke artifacts and writes:
+
+- `config.yaml`
+- `executive_summary.json`
+- `report_payload.json`
+- `portfolio_report.md`
+- `architecture_note.md`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

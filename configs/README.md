@@ -49,3 +49,4 @@ Monitoring configs:
 Delivery configs:
 
 - `local_api.yaml`
+- `portfolio_report_smoke.yaml`

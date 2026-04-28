@@ -33,6 +33,8 @@ run_step "Monitor smoke quality" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.monitor_quality --config configs/monitoring_smoke.yaml
 run_step "Smoke local ranked-feed API" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
+run_step "Build portfolio reporting bundle" \
+  env PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 
 echo
 echo "Smoke quality run completed successfully."

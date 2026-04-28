@@ -1,0 +1,28 @@
+run_name: portfolio_report_smoke
+
+project:
+  name: Personalization Experimentation Platform
+  report_name: Personalization System Summary
+  architecture_note_name: Personalization Architecture Note
+
+input:
+  artifacts_base_dir: artifacts/runs
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_smoke_event_log
+  candidate_base_dir: artifacts/runs
+  candidate_run_name: candidates_smoke
+  ranker_base_dir: artifacts/runs
+  ranker_run_name: ranker_smoke
+  ranker_compare_base_dir: artifacts/runs
+  ranker_compare_run_name: ranker_compare_smoke
+  rerank_base_dir: artifacts/runs
+  rerank_run_name: rerank_smoke
+  experiment_analysis_base_dir: artifacts/runs
+  experiment_analysis_run_name: experiment_analysis_smoke
+  monitoring_base_dir: artifacts/runs
+  monitoring_run_name: monitoring_smoke
+  local_api_base_dir: artifacts/runs
+  local_api_run_name: local_api_smoke
+
+artifacts:
+  base_dir: artifacts/runs

@@ -1,5 +1,6 @@
 from personalization_platform.pipeline.show_blueprint import load_config
 from personalization_platform.delivery.local_api import create_local_api_app
+from personalization_platform.reporting.bundle import build_reporting_bundle
 
 
 def test_load_config_reads_yaml(tmp_path):
@@ -26,3 +27,7 @@ def test_create_local_api_app_returns_fastapi_app():
     )
 
     assert app.title == "Test API"
+
+
+def test_build_reporting_bundle_is_importable():
+    assert callable(build_reporting_bundle)
