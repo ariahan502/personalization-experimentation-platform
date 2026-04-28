@@ -40,7 +40,7 @@ What exists today:
 
 - request-level event-log build from fixture-backed feed-interaction inputs
 - multi-source candidate generation using `affinity`, `content`, and `trending`
-- baseline ranking dataset, logistic and tree-based rankers, and comparison bundle
+- baseline ranking dataset, logistic and tree-based rankers, and segmented comparison bundle
 - explicit reranking rules for freshness, topic diversity, and creator spread
 - deterministic experiment assignment plus offline readout with guardrails and SRM
 - monitoring bundle for funnel health, score stability, and experiment integrity
@@ -146,6 +146,13 @@ PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --con
 ```
 
 This medium path keeps the same local, reproducible workflow but provides more requests and a larger time-ordered validation holdout for retrieval and ranking diagnostics.
+
+The ranker comparison bundles now include:
+
+- aggregate classification and ranking metrics
+- row-level slices by candidate source and multi-source provenance
+- request-level slices by cold-start status and history-depth segment
+- segment deltas versus retrieval-order fallback
 
 ## Commands
 
