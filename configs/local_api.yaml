@@ -1,0 +1,19 @@
+run_name: local_api_smoke
+
+input:
+  rerank_base_dir: data/processed/reranked_feed
+  rerank_run_name: rerank_smoke
+
+api:
+  api_name: local_ranked_feed_api
+  title: Personalization Local Ranked Feed API
+  host: 127.0.0.1
+  port: 8000
+
+smoke_request:
+  request_id: train-request-6
+  user_id: U200
+  top_k: 3
+
+artifacts:
+  base_dir: artifacts/runs

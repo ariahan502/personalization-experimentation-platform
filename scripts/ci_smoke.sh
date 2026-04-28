@@ -31,6 +31,8 @@ run_step "Analyze smoke experiment" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.analyze_experiment --config configs/experiment_analysis_smoke.yaml
 run_step "Monitor smoke quality" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.monitor_quality --config configs/monitoring_smoke.yaml
+run_step "Smoke local ranked-feed API" \
+  env PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
 
 echo
 echo "Smoke quality run completed successfully."

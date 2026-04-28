@@ -45,3 +45,7 @@ Experiment configs:
 Monitoring configs:
 
 - `monitoring_smoke.yaml`
+
+Delivery configs:
+
+- `local_api.yaml`

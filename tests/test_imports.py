@@ -1,4 +1,5 @@
 from personalization_platform.pipeline.show_blueprint import load_config
+from personalization_platform.delivery.local_api import create_local_api_app
 
 
 def test_load_config_reads_yaml(tmp_path):
@@ -8,3 +9,20 @@ def test_load_config_reads_yaml(tmp_path):
     loaded = load_config(config_path)
 
     assert loaded["run_name"] == "smoke"
+
+
+def test_create_local_api_app_returns_fastapi_app():
+    app = create_local_api_app(
+        {
+            "input": {
+                "rerank_base_dir": "data/processed/reranked_feed",
+                "rerank_run_name": "rerank_smoke",
+            },
+            "api": {
+                "api_name": "test_api",
+                "title": "Test API",
+            },
+        }
+    )
+
+    assert app.title == "Test API"

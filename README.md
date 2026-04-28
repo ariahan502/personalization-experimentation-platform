@@ -331,7 +331,26 @@ For one-command repo health validation, run:
 bash scripts/ci_smoke.sh
 ```
 
-This smoke script keeps the project honest by running the lightweight import test plus the full smoke pipeline chain from scaffold validation through monitoring. It is meant to be the default “did we break anything important?” command after incremental changes.
+This smoke script keeps the project honest by running the lightweight import test plus the full smoke pipeline chain from scaffold validation through monitoring and the local API smoke check. It is meant to be the default “did we break anything important?” command after incremental changes.
+
+The optional local ranked-feed API can be smoke-tested with:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
+```
+
+This command builds a small FastAPI app backed by the latest local reranked smoke outputs, issues a fixture-compatible request through the API itself, and writes:
+
+- `config.yaml`
+- `summary.json`
+- `smoke_response.json`
+- `openapi_snapshot.json`
+
+If you want to launch the server interactively instead of running the smoke check, use:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml --serve
+```
 
 ## Delivery Philosophy
 
