@@ -2,13 +2,13 @@
 
 ## Goal
 
-Build and maintain a reproducible offline personalization and experimentation pipeline for a content-platform feed grounded in MIND-derived event logs.
+Build and maintain a reproducible offline personalization and experimentation pipeline for a content-platform feed, currently using MIND as the raw interaction source.
 
 The project will support data preparation, candidate generation, ranking, reranking constraints, replay-style evaluation, experiment assignment, A/B analysis, reporting, and quality checks.
 
 ## Principles
 
-- Treat personalization as a decision system, not just a model-training task.
+- Treat personalization as a decision system, not only a model-training task.
 - Keep retrieval, ranking, reranking, experimentation, and reporting clearly separated.
 - Prefer reproducible, config-driven workflows over notebook-only analysis.
 - Treat offline ranking metrics as screening tools and online experiments as the final validation mechanism.
@@ -19,7 +19,7 @@ The project will support data preparation, candidate generation, ranking, rerank
 
 - Project scaffold aligned with a reproducible `src/` Python layout
 - Config-driven event-log schema and input contracts
-- Smoke event-log build from MIND-style fixture inputs
+- Smoke event-log build from fixture-backed feed-interaction inputs
 - Multi-source retrieval with affinity and trending candidate sources
 - Baseline ranking dataset, logistic baseline ranker, and fallback comparison diagnostics
 - Explicit reranking policy for freshness, diversity, and creator spread
@@ -127,4 +127,4 @@ Status: complete.
 - Large raw data, generated working tables, and run artifacts stay out of Git.
 - `doc/` is a local planning workspace and should not be relied on as tracked source of truth unless explicitly promoted.
 - Run bundles are written under `artifacts/runs/<timestamp>_<run_name>/`.
-- MIND remains the anchor dataset, but the project will augment it with realistic semi-synthetic operational fields when needed for experimentation and ranking simulation.
+- MIND remains the current raw source, but the project builds additional request-level and operational fields when the source data does not expose them directly.

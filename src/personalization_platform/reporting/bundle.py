@@ -122,7 +122,7 @@ def build_executive_summary(*, project: dict[str, Any], inputs: dict[str, Any]) 
         },
         "credibility_notes": [
             "This is an offline smoke-sized system validation, not production evidence.",
-            "MIND is reshaped into a semi-synthetic feed request surface to make ranking and experimentation workflows explicit.",
+            "The raw source is public, but the implemented system layers around it are explicit, reproducible, and engineering-oriented.",
             "The project now supports a reproducible path from event-log build through API replay using only repo-local assets.",
         ],
     }
@@ -183,7 +183,7 @@ def build_report_markdown(*, project: dict[str, Any], inputs: dict[str, Any], ex
         "## What This Project Demonstrates",
         "",
         f"{project['name']} is a reproducible offline personalization stack for a content feed. "
-        "It converts MIND-style inputs into request-level event logs, builds multi-source candidates, "
+        "It converts raw interaction inputs into request-level event logs, builds multi-source candidates, "
         "trains a baseline ranker, applies explicit reranking constraints, assigns experiments deterministically, "
         "runs offline monitoring, and replays ranked results through a local demo API.",
         "",
@@ -208,7 +208,7 @@ def build_report_markdown(*, project: dict[str, Any], inputs: dict[str, Any], ex
         "## Caveats",
         "",
         "- This bundle is based on a tiny offline smoke fixture, so metric changes should be interpreted as system-validation evidence rather than product-performance proof.",
-        "- MIND does not provide a production event log, so some operational fields are semi-synthetic or inferred to make the workflow realistic.",
+        "- The raw source does not expose every production logging field directly, so some request-level and operational attributes are inferred or config-backed in the offline workflow.",
         "- The local API is a replay/demo layer backed by local artifacts, not a production serving system.",
     ]
     return "\n".join(lines) + "\n"
@@ -225,7 +225,7 @@ def build_architecture_note(*, project: dict[str, Any], inputs: dict[str, Any]) 
         "",
         "## System Layers",
         "",
-        "1. Event-log foundation converts MIND-like behaviors and news rows into requests, impressions, user_state, and item_state tables.",
+        "1. Event-log foundation converts raw interaction inputs into requests, impressions, user_state, and item_state tables.",
         "2. Retrieval merges affinity and trending candidate sources with deterministic provenance tracking.",
         "3. Ranking turns candidate rows into a supervised dataset and fits an interpretable logistic baseline.",
         "4. Reranking applies explicit freshness, topic-diversity, and creator-spread rules on top of model scores.",

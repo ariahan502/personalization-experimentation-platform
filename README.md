@@ -1,6 +1,6 @@
 # Personalization Experimentation Platform
 
-This repository is a reproducible, config-driven personalization and experimentation project for a content platform feed.
+This repository is a reproducible, config-driven personalization and experimentation system for a content feed.
 
 The project is designed around a realistic product question:
 
@@ -8,7 +8,7 @@ The project is designed around a realistic product question:
 - how should ranking interact with freshness, diversity, fatigue, and creator-spread constraints
 - how should offline model changes be validated before and after an A/B experiment
 
-The intended system is not a generic recommender demo. It is a practical offline-first personalization stack that mirrors how a real team would operate:
+The repository implements an offline-first personalization stack with the same major layers that appear in production feed systems:
 
 - event and session preparation
 - candidate generation
@@ -17,11 +17,11 @@ The intended system is not a generic recommender demo. It is a practical offline
 - metric attribution and A/B analysis
 - reporting, monitoring, and run artifacts
 
-The initial dataset choice is `MIND`, the Microsoft News Dataset, used as the foundation for a semi-synthetic event-log workflow that better resembles real feed requests than a plain benchmark table.
+The current raw data source is `MIND`, the Microsoft News Dataset. In this repo, MIND is treated as a realistic input source for building a request-level feed-ranking workflow rather than as a benchmark table used in isolation.
 
-## Business Story
+## Product Context
 
-Imagine a content platform home feed with these recurring problems:
+This project is framed around common feed-ranking problems:
 
 - new and light users do not have enough history for stable personalization
 - returning users can be over-served the same topic or creator
@@ -29,7 +29,7 @@ Imagine a content platform home feed with these recurring problems:
 - offline ranking metrics can improve while session quality or long-click quality does not
 - teams need controlled experiments to know whether a new ranking treatment should ship
 
-This project treats personalization as a decision system rather than a single model. The objective is to optimize session-level engagement under operational constraints, with experimentation as the final validation layer.
+The project treats personalization as a decision system rather than a single model-training task. The objective is to optimize session-level engagement under explicit operational constraints, with experimentation as the decision layer for model and policy changes.
 
 ## Design Principles
 
@@ -53,7 +53,7 @@ Together, they are intended to show breadth across acquisition, engagement, offl
 
 ## End-To-End Standard
 
-This project is intended to be an end-to-end, code-first system project rather than a notebook portfolio exercise.
+This project is implemented as an end-to-end, code-first system rather than an analysis notebook.
 
 - reusable logic should live under `src/personalization_platform/`
 - changeable settings should live under `configs/`
@@ -63,7 +63,7 @@ This project is intended to be an end-to-end, code-first system project rather t
 
 The intended end-to-end flow is:
 
-1. build a request-level event-log surface from MIND-derived inputs
+1. build a request-level event-log surface from feed-interaction inputs derived from MIND
 2. generate multi-source candidates
 3. train and evaluate a baseline ranker
 4. apply explicit reranking constraints
@@ -77,7 +77,7 @@ That end-to-end flow now exists in the repo as a smoke-validated path. The proje
 The target architecture is organized into six modules:
 
 1. `data`
-   Converts MIND into request-level, session-aware event tables and semi-synthetic feed logs.
+   Converts raw interaction inputs into request-level, session-aware event tables for downstream retrieval, ranking, and experimentation workflows.
 2. `retrieval`
    Builds multi-source candidate sets such as trending, topic affinity, and history-based retrieval.
 3. `ranking`
@@ -93,7 +93,7 @@ The target architecture is organized into six modules:
 
 What exists today:
 
-- request-level event-log build from MIND-style smoke inputs
+- request-level event-log build from fixture-backed feed-interaction inputs
 - multi-source candidate generation using `affinity` plus `trending`
 - baseline ranking dataset, logistic ranker, and fallback comparison bundle
 - explicit reranking rules for freshness, topic diversity, and creator spread
@@ -136,16 +136,16 @@ Local data should be organized under:
 
 ## Data Direction
 
-The planned data flow starts from MIND and reshapes it into a product-style log surface:
+The current implementation uses MIND as the raw source and reshapes it into a product-style log surface:
 
 - impression and click events
 - inferred request groups
 - session boundaries
 - user-state snapshots
 - item-state snapshots
-- semi-synthetic fields for freshness decay, fatigue, and experiment assignment
+- inferred or config-backed fields for freshness, creator spread, and experiment assignment when the raw source does not expose them directly
 
-The goal is not to invent unrealistic behavior. The goal is to anchor the log distribution in a real public dataset and then add operational fields needed for ranking and experimentation workflows.
+This is an honest offline engineering pattern: use a real public interaction dataset, then build the missing request-level and operational surfaces needed for retrieval, ranking, reranking, and experimentation. The repo does not claim production traffic or online outcomes, but it does implement a real multi-stage system around realistic feed-ranking problems.
 
 ## Setup
 
@@ -228,7 +228,7 @@ This writes a run bundle under `artifacts/runs/<timestamp>_event_log_schema/` wi
 - `schema_contract.json`
 - `schema_summary.json`
 
-This command validates the first-pass schema contract that downstream MIND conversion, retrieval, ranking, and experimentation tickets will build against.
+This command validates the first-pass schema contract that downstream event-log conversion, retrieval, ranking, and experimentation stages build against.
 
 A human-readable version of the contract lives in [src/personalization_platform/data/event_log_schema_contract.md](/Users/hanlingjuan/personalization-experimentation-platform/src/personalization_platform/data/event_log_schema_contract.md).
 
@@ -241,7 +241,7 @@ PYTHONPATH=src python -m personalization_platform.pipeline.validate_event_log_co
 
 These configs make the event-log input contract explicit:
 
-- `input.source_mode` distinguishes smoke fixtures from raw MIND inputs
+- `input.source_mode` distinguishes smoke fixtures from raw dataset inputs
 - `smoke_fixture.root_dir` defines the local smoke path under `data/fixtures/`
 - `raw_input.root_dir` defines the raw dataset path under `data/raw/`
 - `output.base_dir` defines where event-log tables should land
@@ -397,15 +397,15 @@ This command reuses the latest smoke artifacts and writes:
 - `portfolio_report.md`
 - `architecture_note.md`
 
-## Delivery Philosophy
+## Positioning
 
-This project should stay honest and useful:
+This project should be read as a production-style offline system prototype:
 
-- not just another MIND benchmark leaderboard attempt
-- not just another CTR model notebook
-- not an experimentation slide deck without operational logic
+- the raw source is public, but the engineering work is in the system built around it
+- retrieval, ranking, reranking, experimentation, monitoring, delivery, and reporting are all explicit stages
+- the repo is strongest as evidence of system design, pipeline engineering, and decision-oriented ML workflow design
 
-The target outcome is a credible feed-personalization project that shows system thinking across offline ranking, operational constraints, and A/B validation.
+The target outcome is a credible feed-personalization project that shows engineering depth across offline ranking, policy constraints, experiment structure, monitoring, and delivery.
 
 ## Likely Next Extensions
 
