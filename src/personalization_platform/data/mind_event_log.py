@@ -4,6 +4,7 @@ import json
 from collections import Counter
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import pandas as pd
 
@@ -165,7 +166,8 @@ def build_user_state_table(
 
 def build_item_state_table(news: pd.DataFrame) -> pd.DataFrame:
     items = news.copy()
-    items["publisher"] = "unknown_publisher"
+    items["publisher"] = items["url"].map(derive_publisher)
+    items["creator_id"] = items.apply(derive_creator_id, axis=1)
     items["published_ts"] = ""
     items["entity_ids"] = items.apply(_merge_entity_fields, axis=1)
     return items[
@@ -175,6 +177,7 @@ def build_item_state_table(news: pd.DataFrame) -> pd.DataFrame:
             "subcategory",
             "title",
             "publisher",
+            "creator_id",
             "published_ts",
             "abstract",
             "entity_ids",
@@ -220,7 +223,8 @@ def build_manifest(
         "assumptions": list(SCHEMA_ASSUMPTIONS)
         + [
             "Sessions are inferred with a 30-minute inactivity gap within each user.",
-            "Item publisher is set to 'unknown_publisher' in the smoke slice because the raw-like fixture does not include a source field.",
+            "Item publisher is derived from the article URL hostname because the raw source does not expose a dedicated publisher field.",
+            "Creator identifiers are derived from publisher plus subcategory so reranking and reporting can use a stable creator-like surface.",
             "Published timestamps are left blank in the smoke slice because the fixture omits them.",
         ],
     }
@@ -254,3 +258,23 @@ def _merge_entity_fields(row: pd.Series) -> str:
         if raw_value and raw_value != "[]":
             entity_ids.append(raw_value)
     return json.dumps(entity_ids)
+
+
+def derive_publisher(url: str) -> str:
+    if not url:
+        return "unknown_publisher"
+    hostname = urlparse(url).netloc.lower()
+    if hostname.startswith("www."):
+        hostname = hostname[4:]
+    if not hostname:
+        return "unknown_publisher"
+    root = hostname.split(".")[0].replace("-", "_")
+    return root or "unknown_publisher"
+
+
+def derive_creator_id(row: pd.Series) -> str:
+    publisher = str(row.get("publisher", "unknown_publisher")) or "unknown_publisher"
+    subcategory = str(row.get("subcategory", "")).strip().lower().replace(" ", "_")
+    if subcategory:
+        return f"creator_{publisher}_{subcategory}"
+    return f"creator_{publisher}"

@@ -51,8 +51,8 @@ Intended use:
 Known limitations:
 
 - timestamps are tiny and hand-authored rather than distribution-matched to full MIND
-- URLs and entity fields are placeholders
-- publisher must still be derived by downstream code because raw MIND-like rows do not include it here
+- URLs are lightweight placeholders, but they now carry stable source domains so downstream code can derive publisher-like metadata
+- publisher and creator identifiers are derived by downstream code because raw MIND-like rows do not include dedicated source-owner fields
 - engagement is binary click-only
 - impression depth, user count, and topic coverage are intentionally too small for metric interpretation
 - the medium fixture improves validation depth, but it is still a local portfolio-scale slice rather than a production-like corpus

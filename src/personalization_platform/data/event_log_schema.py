@@ -291,7 +291,13 @@ ITEM_STATE_CONTRACT = TableContract(
             name="publisher",
             dtype="string",
             description="Publisher or source field used as the initial creator proxy.",
-            source="news.tsv source if available, otherwise derived placeholder",
+            source="Derived from article URL hostname when a dedicated source field is absent.",
+        ),
+        FieldContract(
+            name="creator_id",
+            dtype="string",
+            description="Normalized creator identifier used for creator-spread constraints and reporting.",
+            source="Derived from publisher plus subcategory when no direct creator field exists.",
         ),
         FieldContract(
             name="published_ts",
@@ -323,12 +329,6 @@ ITEM_STATE_CONTRACT = TableContract(
             description="Derived item age used in freshness-aware ranking and reranking.",
             required=False,
         ),
-        FieldContract(
-            name="creator_id",
-            dtype="string",
-            description="Normalized creator identifier for creator-spread constraints.",
-            required=False,
-        ),
     ),
 )
 
@@ -337,7 +337,7 @@ SCHEMA_ASSUMPTIONS = (
     "MIND behaviors rows are treated as request-level records; request_id is inferred because the raw dataset does not provide a stable request key.",
     "Session boundaries are inferred from per-user timestamp gaps and may be simplified in the smoke implementation.",
     "User state is point-in-time and limited to information visible before the request, primarily the provided click history.",
-    "Item metadata comes from MIND news records, while publisher, creator, freshness, and experiment fields may need to be derived or simulated later.",
+    "Item metadata comes from MIND news records, while publisher, creator, freshness, and experiment fields may need to be derived when the raw source omits them.",
     "Impression labels are binary clicks only in the first slice; richer engagement targets are future extensions.",
 )
 

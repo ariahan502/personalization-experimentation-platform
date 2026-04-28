@@ -15,12 +15,14 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
     event_log_inputs = load_event_log_inputs(config)
     requests = event_log_inputs["requests"].copy()
     impressions = event_log_inputs["impressions"].copy()
+    item_state = event_log_inputs["item_state"].copy()
 
     requests["request_ts"] = pd.to_datetime(requests["request_ts"])
     request_ts_lookup = dict(zip(requests["request_id"], requests["request_ts"], strict=False))
     impressions["request_ts_lookup"] = pd.to_datetime(impressions["request_ts_lookup"])
 
-    creator_map = config["reranking"]["creator_map"]
+    creator_map = config["reranking"].get("creator_map", {})
+    item_creator_lookup = dict(zip(item_state["item_id"], item_state["creator_id"], strict=False))
     topic_penalty = float(config["reranking"]["topic_repeat_penalty"])
     creator_penalty = float(config["reranking"]["creator_repeat_penalty"])
     freshness_weight = float(config["reranking"]["freshness_weight"])
@@ -32,7 +34,9 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
         request_time = request_ts_lookup[request_id]
         working = request_frame.copy()
         working["request_ts_dt"] = pd.to_datetime(working["request_ts"])
-        working["creator_id"] = working["item_id"].map(lambda item_id: creator_map.get(item_id, "creator_unknown"))
+        working["creator_id"] = working["item_id"].map(
+            lambda item_id: item_creator_lookup.get(item_id, creator_map.get(item_id, "creator_unknown"))
+        )
         working["freshness_minutes_since_last_seen"] = working["item_id"].map(
             lambda item_id: compute_freshness_minutes(
                 impressions=impressions,
@@ -203,13 +207,13 @@ def build_rerank_manifest(
                 "penalty": config["reranking"]["topic_repeat_penalty"],
             },
             "creator_spread": {
-                "description": "Penalize repeated creator exposure within the reranked request list using a config-backed creator map.",
+                "description": "Penalize repeated creator exposure within the reranked request list using creator identifiers from item_state.",
                 "penalty": config["reranking"]["creator_repeat_penalty"],
             },
         },
         "assumptions": [
             "Published timestamps are not available in the smoke fixture, so freshness is approximated by time since prior item exposure in the event log.",
-            "Creator spread uses a config-backed item-to-creator mapping in the smoke path because the current item_state surface does not yet carry real creator identifiers.",
+            "Creator spread uses creator identifiers derived into item_state, with config-backed fallback only for compatibility.",
             "Reranking is applied greedily within each request so rule effects remain inspectable.",
         ],
         "metrics_snapshot": metrics,
