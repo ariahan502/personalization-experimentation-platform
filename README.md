@@ -325,6 +325,14 @@ This command reads the latest smoke outputs across event-log, retrieval, ranking
 - `summary.json`
 - `diagnostics.json`
 
+For one-command repo health validation, run:
+
+```bash
+bash scripts/ci_smoke.sh
+```
+
+This smoke script keeps the project honest by running the lightweight import test plus the full smoke pipeline chain from scaffold validation through monitoring. It is meant to be the default “did we break anything important?” command after incremental changes.
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:
