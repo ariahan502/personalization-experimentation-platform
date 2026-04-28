@@ -36,3 +36,7 @@ Ranking configs:
 Reranking configs:
 
 - `rerank_smoke.yaml`
+
+Experiment configs:
+
+- `experiment_smoke.yaml`

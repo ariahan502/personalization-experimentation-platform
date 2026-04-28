@@ -289,6 +289,18 @@ This command applies explicit freshness, diversity, and creator-spread rules to 
 - `metrics.json`
 - `manifest.json`
 
+The first smoke experiment-assignment command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.assign_experiment --config configs/experiment_smoke.yaml
+```
+
+This command applies deterministic control-versus-treatment assignment on top of the reranked request surface, writes assignment tables under `data/processed/experiment_assignment/<run_name>/`, and emits a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:
