@@ -18,79 +18,89 @@ The project will support data preparation, candidate generation, ranking, rerank
 ## Current Capabilities
 
 - Project scaffold aligned with a reproducible `src/` Python layout
-- Config-driven scaffold validation command
-- Config-driven event-log schema contract command
-- Roadmap and execution planning workspace
-- Package skeleton for data, retrieval, ranking, reranking, experiments, evaluation, and pipeline code
-- First code-backed event-log schema contract for requests, impressions, user state, and item state
+- Config-driven event-log schema and input contracts
+- Smoke event-log build from MIND-style fixture inputs
+- Multi-source retrieval with affinity and trending candidate sources
+- Baseline ranking dataset, logistic baseline ranker, and fallback comparison diagnostics
+- Explicit reranking policy for freshness, diversity, and creator spread
+- Deterministic experiment assignment plus offline experiment readout with guardrails and SRM
+- Offline monitoring bundle for funnel coverage, score stability, and experiment integrity
+- Optional local ranked-feed replay API
+- Portfolio-facing reporting bundle and architecture note
+- One-command smoke validation via `bash scripts/ci_smoke.sh`
 
-## Near-Term Roadmap
+## Roadmap Status
 
-### 1. MIND Event-Log Foundation
+The original four-phase roadmap has now been implemented as a smoke-validated end-to-end system.
 
-Convert MIND impressions into a request-level, session-aware dataset surface with the smallest useful contract that downstream retrieval, ranking, and experimentation work can consume.
+- Phase 1: complete
+- Phase 2: complete
+- Phase 3: complete
+- Phase 4: complete
 
-Expected outputs:
+The repo now supports a reproducible path from event-log preparation through delivery/demo artifacts using only local configs and fixture-compatible assets.
 
-- documented raw-to-event-log conversion path
-- minimal schema contract for requests, impressions, user state, and item state
-- smoke fixture path
-- config-backed smoke event-log build command
+## Next Expansion Opportunities
 
-Validation:
+### 1. Data Realism And Scale
 
-- event-log build runs from config against smoke inputs
-- output tables match the documented first-pass schema
-- run bundle includes row counts, schema version, and explicit assumptions
-
-### 2. Baseline Personalization Stack
-
-Add candidate generation, a first ranker, and offline ranking diagnostics.
-
-Expected outputs:
-
-- multi-source candidate builder
-- baseline ranking pipeline
-- ranking evaluation report
-
-Validation:
-
-- baseline training runs from config
-- retrieval and ranking metrics are written to a run bundle
-- ranker performance is compared against at least one simpler fallback such as trending-only ordering
-- evaluation bundle includes at least one top-line ranking metric and one diagnostic view
-
-### 3. Experimentation Layer
-
-Add deterministic experiment assignment and A/B readout workflows.
+Extend the smoke-sized setup into a somewhat richer offline evaluation environment without losing reproducibility.
 
 Expected outputs:
 
-- assignment logic
-- experiment manifest and treatment definitions
-- A/B analysis artifact bundle
+- larger or more varied validation fixtures
+- richer creator and content metadata
+- stronger valid/test splits for ranking and experimentation
 
 Validation:
 
-- assignment is deterministic and reproducible
-- experiment summary, guardrails, and SRM checks are emitted from config
-- treatment definitions and analysis assumptions are inspectable in the artifact bundle
+- the current smoke path still passes
+- expanded fixtures produce stable bundles and more informative metrics
 
-### 4. Delivery Polish
+### 2. Modeling Depth
 
-Add monitoring, optional local serving, and portfolio-quality reporting.
+Go beyond the first interpretable baseline while keeping the comparison frame explicit.
 
 Expected outputs:
 
-- drift and quality reports
-- optional local scoring API
-- business-facing summary artifacts
+- stronger ranker variants
+- richer retrieval features or sources
+- deeper offline evaluation slices
 
 Validation:
 
-- smoke quality command passes
-- optional API smoke run returns ranked items from a small fixture input
-- reporting bundle explains technical results, business tradeoffs, and offline caveats clearly enough for portfolio use
+- each new model still compares against the simpler fallback path
+- metrics remain reproducible from config-backed runs
+
+### 3. Engineering Hardening
+
+Improve maintainability and environment reproducibility.
+
+Expected outputs:
+
+- more targeted tests
+- optional CI automation
+- tighter dependency management or isolated environment guidance
+
+Validation:
+
+- smoke command remains the primary high-signal health check
+- incremental tests catch stage-level regressions earlier
+
+### 4. Presentation And Storytelling
+
+Keep improving the clarity of the project story for README, demo, and portfolio use.
+
+Expected outputs:
+
+- cleaner report excerpts for the README
+- demo instructions or screenshots
+- stronger architecture storytelling around tradeoffs
+
+Validation:
+
+- the repo remains easy to understand for a new reader
+- the reporting bundle continues to reflect real artifact outputs
 
 ## Phase Exit Criteria
 
@@ -109,6 +119,8 @@ Phase 3 is complete when assignment is deterministic, experiment manifests are e
 ### Phase 4 Exit
 
 Phase 4 is complete when the project can demo a fixture-sized ranked-feed flow, emit a smoke-quality pass, and produce a concise reporting bundle that is suitable for README or resume-backed project storytelling.
+
+Status: complete.
 
 ## Operating Notes
 

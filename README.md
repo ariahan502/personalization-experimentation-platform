@@ -70,7 +70,7 @@ The intended end-to-end flow is:
 5. assign experiments deterministically and analyze treatment results
 6. emit monitoring, reporting, and optional local serving artifacts
 
-The repo is not fully end-to-end yet. Today it validates the scaffold and the first schema contract. It becomes truly end-to-end once the event-log, retrieval, ranking, reranking, and experimentation commands all run from config and produce connected artifact bundles.
+That end-to-end flow now exists in the repo as a smoke-validated path. The project can build the data surface, train and compare a baseline ranker, apply reranking policy logic, run experiment readouts, emit monitoring artifacts, replay ranked results through a local API, and package the results into a portfolio-facing report.
 
 ## System Scope
 
@@ -93,20 +93,21 @@ The target architecture is organized into six modules:
 
 What exists today:
 
-- project scaffold aligned with the ads project structure
-- README and roadmap for the full system direction
-- local execution plan workspace under `doc/`
-- package layout under `src/personalization_platform/`
-- a minimal config-driven scaffold command for repository validation
-- first event-log schema contract for requests, impressions, user state, and item state
-- config-driven schema contract validation command that writes an artifact bundle
+- request-level event-log build from MIND-style smoke inputs
+- multi-source candidate generation using `affinity` plus `trending`
+- baseline ranking dataset, logistic ranker, and fallback comparison bundle
+- explicit reranking rules for freshness, topic diversity, and creator spread
+- deterministic experiment assignment plus offline readout with guardrails and SRM
+- monitoring bundle for funnel health, score stability, and experiment integrity
+- local FastAPI demo surface for replaying ranked fixture requests
+- portfolio-facing reporting bundle with a system summary and architecture note
+- one-command repo smoke validation via `bash scripts/ci_smoke.sh`
 
-What comes next:
+What this means:
 
-- Phase 1 minimal event-log build from MIND smoke inputs
-- Phase 2 first retrieval-plus-ranking path
-- Phase 3 reranking constraints plus experimentation framework and readout
-- Phase 4 monitoring, delivery polish, and portfolio-ready reporting
+- the repo is now a coherent offline personalization system rather than a scaffold
+- every major layer is config-driven and writes reproducible run bundles
+- the current best validation path exercises the whole stack from scaffold through reporting
 
 ## Repository Layout
 
@@ -166,7 +167,37 @@ Commands use the `src/` layout directly:
 PYTHONPATH=src python -m ...
 ```
 
-## Quick Validation
+## Demo Path
+
+If you want the fastest end-to-end validation, run:
+
+```bash
+bash scripts/ci_smoke.sh
+```
+
+This smoke script validates the whole project chain:
+
+- scaffold and imports
+- event-log build
+- candidate generation
+- ranking dataset and ranker
+- fallback comparison
+- reranking
+- experiment assignment and readout
+- monitoring
+- local API replay
+- portfolio reporting bundle
+
+For a smaller demo flow after the smoke run succeeds:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
+```
+
+The first command validates the local ranked-feed replay API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
+
+## Commands
 
 The repo includes a minimal scaffold validation command:
 
@@ -331,7 +362,7 @@ For one-command repo health validation, run:
 bash scripts/ci_smoke.sh
 ```
 
-This smoke script keeps the project honest by running the lightweight import test plus the full smoke pipeline chain from scaffold validation through monitoring and the local API smoke check. It is meant to be the default “did we break anything important?” command after incremental changes.
+This smoke script keeps the project honest by running the lightweight import test plus the full smoke pipeline chain from scaffold validation through monitoring, local API replay, and the final reporting bundle. It is meant to be the default “did we break anything important?” command after incremental changes.
 
 The optional local ranked-feed API can be smoke-tested with:
 
@@ -375,3 +406,12 @@ This project should stay honest and useful:
 - not an experimentation slide deck without operational logic
 
 The target outcome is a credible feed-personalization project that shows system thinking across offline ranking, operational constraints, and A/B validation.
+
+## Likely Next Extensions
+
+If this repo continues beyond the current portfolio baseline, the highest-value next investments are:
+
+- richer smoke and validation data so offline metrics are less tiny-sample constrained
+- stronger retrieval and ranking features beyond the first interpretable baseline
+- more targeted tests for stage-level logic, not just import and smoke coverage
+- optional GitHub Actions or tighter dependency pinning for cleaner environment reproducibility
