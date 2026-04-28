@@ -30,3 +30,4 @@ Retrieval configs:
 Ranking configs:
 
 - `ranking_dataset_smoke.yaml`
+- `ranker_smoke.yaml`

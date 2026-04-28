@@ -253,6 +253,18 @@ This command reads the latest smoke event-log and candidate outputs, writes one 
 - `metrics.json`
 - `manifest.json`
 
+The first smoke ranker-training command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.train_ranker --config configs/ranker_smoke.yaml
+```
+
+This command reads the latest smoke ranking dataset, trains a logistic-regression baseline ranker, writes scored rows and a serialized local model under `data/processed/ranker/<run_name>/`, and emits a run bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `manifest.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

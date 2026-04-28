@@ -1,0 +1,42 @@
+run_name: ranker_smoke
+
+input:
+  ranking_dataset_base_dir: data/processed/ranking_dataset
+  ranking_dataset_run_name: ranking_dataset_smoke
+
+features:
+  numeric:
+    - merged_rank
+    - normalized_merged_rank
+    - merged_score
+    - source_rank
+    - source_count
+    - candidate_count
+    - history_length
+    - history_click_count
+    - topic_history_count
+    - request_index_in_session
+    - request_hour
+  binary:
+    - has_multi_source_provenance
+    - has_affinity_source
+    - has_trending_source
+    - is_affinity_primary
+    - is_trending_primary
+    - is_cold_start
+    - candidate_seen_in_impressions
+  categorical:
+    - candidate_source
+    - topic
+
+model:
+  max_iter: 1000
+  C: 1.0
+  solver: liblinear
+  random_state: 42
+
+output:
+  base_dir: data/processed/ranker
+
+artifacts:
+  base_dir: artifacts/runs
