@@ -265,6 +265,18 @@ This command reads the latest smoke ranking dataset, trains a logistic-regressio
 - `metrics.json`
 - `manifest.json`
 
+The first smoke ranker-comparison command is:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_smoke.yaml
+```
+
+This command compares the logistic baseline against a simple retrieval-order fallback, and writes a diagnostics bundle with:
+
+- `config.yaml`
+- `metrics.json`
+- `diagnostics.json`
+
 ## Delivery Philosophy
 
 This project should stay honest and useful:

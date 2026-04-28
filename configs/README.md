@@ -31,3 +31,4 @@ Ranking configs:
 
 - `ranking_dataset_smoke.yaml`
 - `ranker_smoke.yaml`
+- `ranker_compare_smoke.yaml`
