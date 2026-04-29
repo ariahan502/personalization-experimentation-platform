@@ -13,6 +13,12 @@ The project implements a full offline workflow for feed ranking:
 
 The current raw interaction source is `MIND`, the Microsoft News Dataset. In this repo, it is used to construct a request-level ranking workflow with explicit retrieval, ranking, reranking, experimentation, and delivery stages.
 
+## At A Glance
+
+- finished baseline system: event log -> retrieval -> ranking -> reranking -> experimentation -> monitoring -> local API -> reporting
+- extension phase complete for the current repo scope: richer validation data, deeper retrieval, multiple ranker families, segmented diagnostics, stronger experiment readout, targeted tests, CI, and contextual API scoring
+- fastest validation path: `bash scripts/ci_smoke.sh`
+
 ## Process
 
 The implementation follows a small-slice pipeline process:
@@ -33,6 +39,15 @@ The current end-to-end flow is:
 6. emit monitoring, reporting, and optional local serving artifacts
 
 Each stage is implemented as package code under `src/personalization_platform/`, configured through `configs/`, and validated by writing artifact bundles under `artifacts/runs/`.
+
+The current highest-signal local commands are:
+
+```bash
+bash scripts/ci_smoke.sh
+PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
+```
 
 ## Current Repo Status
 

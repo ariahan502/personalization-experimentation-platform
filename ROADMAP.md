@@ -32,13 +32,15 @@ This pattern is used across event-log preparation, retrieval, ranking, reranking
 - Project scaffold aligned with a reproducible `src/` Python layout
 - Config-driven event-log schema and input contracts
 - Smoke event-log build from fixture-backed feed-interaction inputs
-- Multi-source retrieval with affinity and trending candidate sources
-- Baseline ranking dataset, logistic baseline ranker, and fallback comparison diagnostics
+- Medium validation path for richer local ranking evaluation
+- Multi-source retrieval with affinity, content, and trending candidate sources
+- Baseline ranking dataset, logistic and tree-based rankers, and segmented comparison diagnostics
 - Explicit reranking policy for freshness, diversity, and creator spread
-- Deterministic experiment assignment plus offline experiment readout with guardrails and SRM
+- Deterministic experiment assignment plus offline experiment readout with multiple outcomes, guardrails, slices, and SRM
 - Offline monitoring bundle for funnel coverage, score stability, and experiment integrity
-- Optional local ranked-feed replay API
+- Optional local ranked-feed API with replay and contextual scoring modes
 - Portfolio-facing reporting bundle and architecture note
+- Targeted stage-level tests plus GitHub Actions CI
 - One-command smoke validation via `bash scripts/ci_smoke.sh`
 
 ## Roadmap Status
@@ -51,6 +53,17 @@ The original four-phase roadmap has now been implemented as a smoke-validated en
 - Phase 4: complete
 
 The repo now supports a reproducible path from event-log preparation through delivery/demo artifacts using only local configs and fixture-compatible assets.
+
+The extension phase is also complete for the current scope:
+
+- richer validation data
+- richer item and creator metadata
+- deeper retrieval
+- multiple ranker families
+- segmented diagnostics
+- stronger experiment readout
+- engineering hardening
+- more realistic serving/demo behavior
 
 ## Next Expansion Opportunities
 
@@ -91,13 +104,15 @@ Improve maintainability and environment reproducibility.
 Expected outputs:
 
 - more targeted tests
-- optional CI automation
+- CI automation
 - tighter dependency management or isolated environment guidance
 
 Validation:
 
 - smoke command remains the primary high-signal health check
 - incremental tests catch stage-level regressions earlier
+
+Status: mostly complete for the current local-scope project; future work would focus on environment packaging and reproducibility polish rather than missing core checks.
 
 ### 4. Presentation And Storytelling
 
