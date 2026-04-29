@@ -48,38 +48,55 @@ def main() -> None:
 
 
 def smoke_test_api(*, app: Any, config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    smoke_request = config["smoke_request"]
+    replay_request = config["smoke_request"]
+    contextual_request = config["contextual_smoke_request"]
     with TestClient(app) as client:
         health_response = client.get("/health")
-        score_response = client.post(
+        replay_response = client.post(
             "/score/feed",
             json={
-                "request_id": smoke_request["request_id"],
-                "top_k": int(smoke_request.get("top_k", 3)),
-                "user_id": smoke_request.get("user_id"),
+                "request_id": replay_request["request_id"],
+                "top_k": int(replay_request.get("top_k", 3)),
+                "user_id": replay_request.get("user_id"),
             },
+        )
+        contextual_response = client.post(
+            "/score/feed",
+            json=contextual_request,
         )
         if health_response.status_code != 200:
             raise RuntimeError(f"Health endpoint returned unexpected status {health_response.status_code}.")
-        if score_response.status_code != 200:
+        if replay_response.status_code != 200:
             raise RuntimeError(
-                f"Score endpoint returned unexpected status {score_response.status_code}: {score_response.text}"
+                f"Replay score endpoint returned unexpected status {replay_response.status_code}: {replay_response.text}"
+            )
+        if contextual_response.status_code != 200:
+            raise RuntimeError(
+                f"Contextual score endpoint returned unexpected status {contextual_response.status_code}: {contextual_response.text}"
             )
 
         health_payload = health_response.json()
-        response_payload = score_response.json()
+        replay_payload = replay_response.json()
+        contextual_payload = contextual_response.json()
         summary = {
-            "api_name": response_payload["api_name"],
-            "mode": response_payload["mode"],
+            "api_name": replay_payload["api_name"],
             "health_status": health_payload["status"],
-            "request_id": response_payload["request_id"],
-            "user_id": response_payload["user_id"],
-            "dataset_split": response_payload["dataset_split"],
-            "returned_item_count": response_payload["returned_item_count"],
-            "top_item_id": response_payload["items"][0]["item_id"] if response_payload["items"] else None,
-            "source_rerank_dir": response_payload["source_rerank_dir"],
+            "supported_modes": health_payload["supported_modes"],
+            "replay_request_id": replay_payload["request_id"],
+            "replay_top_item_id": replay_payload["items"][0]["item_id"] if replay_payload["items"] else None,
+            "contextual_request_id": contextual_payload["request_id"],
+            "contextual_top_item_id": (
+                contextual_payload["items"][0]["item_id"] if contextual_payload["items"] else None
+            ),
+            "top_item_id": replay_payload["items"][0]["item_id"] if replay_payload["items"] else None,
+            "request_id": replay_payload["request_id"],
+            "user_id": replay_payload["user_id"],
+            "dataset_split": replay_payload["dataset_split"],
+            "returned_item_count": replay_payload["returned_item_count"],
+            "contextual_returned_item_count": contextual_payload["returned_item_count"],
+            "source_rerank_dir": replay_payload["source_rerank_dir"],
         }
-        return summary, response_payload, app.openapi()
+        return summary, {"replay_response": replay_payload, "contextual_response": contextual_payload}, app.openapi()
 
 
 if __name__ == "__main__":

@@ -3,17 +3,44 @@ run_name: local_api_smoke
 input:
   rerank_base_dir: data/processed/reranked_feed
   rerank_run_name: rerank_smoke
+  event_log_base_dir: data/interim/event_logs
+  event_log_run_name: mind_smoke_event_log
 
 api:
   api_name: local_ranked_feed_api
   title: Personalization Local Ranked Feed API
   host: 127.0.0.1
   port: 8000
+  scoring_weights:
+    topic_affinity_weight: 1.0
+    click_prior_weight: 0.5
+    impression_prior_weight: 0.2
+    history_seen_penalty: 0.75
+    freshness_weight: 0.35
+    topic_repeat_penalty: 0.2
+    creator_repeat_penalty: 0.15
 
 smoke_request:
   request_id: train-request-6
   user_id: U200
   top_k: 3
+
+contextual_smoke_request:
+  request_id: contextual-U200
+  user_id: U200
+  top_k: 3
+  history_item_ids:
+    - N102
+    - N103
+  history_topics:
+    - Sports
+    - Finance
+    - Sports
+  candidate_items:
+    - item_id: N102
+    - item_id: N103
+    - item_id: N106
+    - item_id: N105
 
 artifacts:
   base_dir: artifacts/runs

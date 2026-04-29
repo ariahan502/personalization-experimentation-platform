@@ -44,7 +44,7 @@ What exists today:
 - explicit reranking rules for freshness, topic diversity, and creator spread
 - deterministic experiment assignment plus offline readout with guardrails and SRM
 - monitoring bundle for funnel health, score stability, and experiment integrity
-- local FastAPI demo surface for replaying ranked fixture requests
+- local FastAPI demo surface for replaying ranked fixture requests and scoring contextual candidate payloads
 - portfolio-facing reporting bundle with a system summary and architecture note
 - targeted unit tests for retrieval merge logic, segmented ranking diagnostics, reranking helpers, and experiment assignment
 - one-command repo smoke validation via `bash scripts/ci_smoke.sh`
@@ -126,7 +126,7 @@ This smoke script validates the whole project chain:
 - reranking
 - experiment assignment and readout
 - monitoring
-- local API replay
+- local API replay and contextual scoring
 - portfolio reporting bundle
 
 For a smaller demo flow after the smoke run succeeds:
@@ -136,7 +136,7 @@ PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --c
 PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 ```
 
-The first command validates the local ranked-feed replay API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
+The first command validates both replay mode and contextual scoring mode for the local ranked-feed API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
 
 The experiment analysis bundle now includes:
 

@@ -119,11 +119,12 @@ def build_executive_summary(*, project: dict[str, Any], inputs: dict[str, Any]) 
             "experiment_treatment_lift": experiment_summary["primary_metrics"]["reranked_policy"]["lift_vs_control"],
             "monitoring_flagged_check_count": monitoring_summary["flagged_check_count"],
             "local_api_top_item_id": local_api_summary["top_item_id"],
+            "local_api_contextual_top_item_id": local_api_summary.get("contextual_top_item_id"),
         },
         "credibility_notes": [
             "This is an offline smoke-sized system validation, not production evidence.",
             "The raw source is public, but the implemented system layers around it are explicit, reproducible, and engineering-oriented.",
-            "The project now supports a reproducible path from event-log build through API replay using only repo-local assets.",
+            "The project now supports a reproducible path from event-log build through local API replay and contextual scoring using only repo-local assets.",
         ],
     }
 
@@ -164,7 +165,7 @@ def build_report_payload(
         "caveats": monitoring_diagnostics["caveats"]
         + [
             "The valid split is extremely small, so metric deltas are primarily pipeline sanity checks.",
-            "The local API replays offline reranked outputs rather than executing live online feature retrieval.",
+            "The local API still uses local artifact-backed heuristics for contextual scoring rather than a production feature service.",
         ],
     }
 
@@ -187,7 +188,7 @@ def build_report_markdown(*, project: dict[str, Any], inputs: dict[str, Any], ex
         f"{project['name']} is a reproducible offline personalization stack for a content feed. "
         "It converts raw interaction inputs into request-level event logs, builds multi-source candidates, "
         "trains a baseline ranker, applies explicit reranking constraints, assigns experiments deterministically, "
-        "runs offline monitoring, and replays ranked results through a local demo API.",
+        "runs offline monitoring, and exposes both replay-style and contextual-scoring paths through a local demo API.",
         "",
         "## Current System Outcome",
         "",
@@ -198,7 +199,7 @@ def build_report_markdown(*, project: dict[str, Any], inputs: dict[str, Any], ex
         f"- Reranking policy: changed {rerank_metrics['changed_request_count']} of {rerank_metrics['request_count']} requests with average absolute rank shift {rerank_metrics['average_absolute_rank_shift']:.3f}.",
         f"- Experiment readout: treatment top-1 CTR moved from {experiment_summary['primary_metrics']['control']['top1_ctr']:.3f} in control to {experiment_summary['primary_metrics']['reranked_policy']['top1_ctr']:.3f} in reranked policy, with SRM flagged = {str(experiment_summary['srm_check']['flagged']).lower()}.",
         f"- Monitoring posture: {monitoring_summary['flagged_check_count']} smoke checks flagged; overall status = `{monitoring_summary['overall_status']}`.",
-        f"- Delivery surface: local API replay returned top item `{local_api_summary['top_item_id']}` for request `{local_api_summary['request_id']}`.",
+        f"- Delivery surface: local API replay returned top item `{local_api_summary['top_item_id']}` for request `{local_api_summary['request_id']}`, and contextual scoring returned `{local_api_summary.get('contextual_top_item_id')}` for `{local_api_summary.get('contextual_request_id')}`.",
         "",
         "## Business Framing",
         "",
@@ -211,7 +212,7 @@ def build_report_markdown(*, project: dict[str, Any], inputs: dict[str, Any], ex
         "",
         "- This bundle is based on a tiny offline smoke fixture, so metric changes should be interpreted as system-validation evidence rather than product-performance proof.",
         "- The raw source does not expose every production logging field directly, so some request-level and operational attributes are inferred or config-backed in the offline workflow.",
-        "- The local API is a replay/demo layer backed by local artifacts, not a production serving system.",
+        "- The local API is still a local artifact-backed demo surface, not a production serving system or online feature platform.",
     ]
     return "\n".join(lines) + "\n"
 

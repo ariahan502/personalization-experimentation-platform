@@ -58,3 +58,5 @@ Delivery configs:
 
 - `local_api.yaml`
 - `portfolio_report_smoke.yaml`
+
+The local API config now includes both replay-style smoke requests and contextual candidate-payload smoke requests.
