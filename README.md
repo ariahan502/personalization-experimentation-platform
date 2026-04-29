@@ -387,11 +387,11 @@ This project should be read as a production-style offline system prototype:
 
 The target outcome is a credible feed-personalization project that shows engineering depth across offline ranking, policy constraints, experiment structure, monitoring, and delivery.
 
-## Likely Next Extensions
+## Remaining Extensions
 
-If this repo continues beyond the current portfolio baseline, the highest-value next investments are:
+Most of the originally planned baseline and extension work is now implemented. If this repo continues further, the most meaningful remaining investments are:
 
-- richer smoke and validation data so offline metrics are less tiny-sample constrained
-- stronger retrieval and ranking features beyond the first interpretable baseline
-- more targeted tests for stage-level logic, not just import and smoke coverage
-- optional GitHub Actions or tighter dependency pinning for cleaner environment reproducibility
+- tighter environment reproducibility through stricter dependency pinning, lockfiles, or a containerized/devcontainer path
+- larger and more varied evaluation slices beyond the current smoke and medium fixtures
+- stronger model families or richer features if you want to push deeper into recommender-specific modeling work
+- additional presentation polish such as screenshots, selected report excerpts, or a short demo walkthrough
