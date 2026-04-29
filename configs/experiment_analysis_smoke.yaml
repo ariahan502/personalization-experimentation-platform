@@ -16,5 +16,19 @@ experiment:
       weight: 0.5
       is_control: false
 
+diagnostics:
+  history_segments:
+    - name: cold_start
+      min_history_length: 0
+      max_history_length: 0
+    - name: short_history
+      min_history_length: 1
+      max_history_length: 2
+    - name: medium_history
+      min_history_length: 3
+      max_history_length: 5
+    - name: long_history
+      min_history_length: 6
+
 artifacts:
   base_dir: artifacts/runs

@@ -48,6 +48,8 @@ Experiment configs:
 - `experiment_smoke.yaml`
 - `experiment_analysis_smoke.yaml`
 
+The experiment analysis config also carries history-depth segment definitions for treatment-slice diagnostics.
+
 Monitoring configs:
 
 - `monitoring_smoke.yaml`

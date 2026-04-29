@@ -138,6 +138,12 @@ PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_repor
 
 The first command validates the local ranked-feed replay API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
 
+The experiment analysis bundle now includes:
+
+- multiple treatment outcomes (`top1_ctr`, `top2_ctr`, and mean exposure label)
+- guardrails for rank shift, prediction drift, top-2 repeat rates, and top-1 concentration
+- treatment slices by dataset split, candidate source, cold-start status, and history-depth segment
+
 For a richer offline validation slice than the tiny smoke path, the repo also includes a medium fixture path:
 
 ```bash

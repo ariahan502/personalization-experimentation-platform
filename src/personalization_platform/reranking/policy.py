@@ -100,6 +100,8 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
             "creator_id",
             "label",
             "dataset_split",
+            "history_length",
+            "is_cold_start",
             "prediction",
             "merged_rank",
             "pre_rank",
