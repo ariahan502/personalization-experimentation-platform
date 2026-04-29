@@ -46,7 +46,9 @@ What exists today:
 - monitoring bundle for funnel health, score stability, and experiment integrity
 - local FastAPI demo surface for replaying ranked fixture requests
 - portfolio-facing reporting bundle with a system summary and architecture note
+- targeted unit tests for retrieval merge logic, segmented ranking diagnostics, reranking helpers, and experiment assignment
 - one-command repo smoke validation via `bash scripts/ci_smoke.sh`
+- GitHub Actions CI that runs the same smoke-quality command on pushes and pull requests
 
 ## Repository Layout
 
