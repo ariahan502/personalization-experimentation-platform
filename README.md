@@ -65,6 +65,19 @@ What exists today:
 - one-command repo smoke validation via `bash scripts/ci_smoke.sh`
 - GitHub Actions CI that runs the same smoke-quality command on pushes and pull requests
 
+## Completed Extensions
+
+Beyond the first end-to-end baseline, the repo now also includes:
+
+- a medium validation path so retrieval and ranking checks are not limited to the tiniest smoke fixture
+- richer item and creator metadata carried into `item_state` and reused by retrieval, reranking, and reporting
+- a third retrieval source (`content`) on top of `affinity` and `trending`
+- multiple ranker families, with logistic and tree-based baselines compared on the same validation split
+- segmented ranking diagnostics by candidate source, provenance, cold-start status, and history depth
+- stronger experiment readout with multiple outcomes, richer guardrails, and treatment slices
+- targeted stage-level tests plus GitHub Actions CI
+- a local API that supports both fixture replay and contextual candidate-payload scoring
+
 ## Repository Layout
 
 Tracked source-of-truth code is intended to live in:
