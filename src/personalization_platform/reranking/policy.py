@@ -26,6 +26,7 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
     topic_penalty = float(config["reranking"]["topic_repeat_penalty"])
     creator_penalty = float(config["reranking"]["creator_repeat_penalty"])
     freshness_weight = float(config["reranking"]["freshness_weight"])
+    prediction_guard_margin = float(config["reranking"].get("prediction_guard_margin", 0.0))
 
     ranked_rows: list[dict[str, Any]] = []
     changed_requests = 0
@@ -66,8 +67,12 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
                 - available["diversity_penalty"].astype(float)
                 - available["creator_penalty"].astype(float)
             )
+            eligible = restrict_to_prediction_guard(
+                available=available,
+                prediction_guard_margin=prediction_guard_margin,
+            )
             next_row = (
-                available.sort_values(
+                eligible.sort_values(
                     ["rerank_score", "prediction", "merged_rank", "item_id"],
                     ascending=[False, False, True, True],
                 )
@@ -122,6 +127,7 @@ def rerank_feed(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], d
         reranked=reranked,
         request_count=int(scored_rows["request_id"].nunique()),
         changed_requests=changed_requests,
+        ranker_dir=ranker_dir,
     )
     manifest = build_rerank_manifest(config=config, metrics=metrics, ranker_dir=ranker_dir)
     return reranked, metrics, manifest
@@ -155,11 +161,30 @@ def freshness_bonus(*, value: float, weight: float) -> float:
     return weight * (60.0 / (capped + 60.0))
 
 
-def build_rerank_metrics(*, reranked: pd.DataFrame, request_count: int, changed_requests: int) -> dict[str, Any]:
+def restrict_to_prediction_guard(
+    *,
+    available: pd.DataFrame,
+    prediction_guard_margin: float,
+) -> pd.DataFrame:
+    if prediction_guard_margin <= 0 or available.empty:
+        return available
+    best_prediction = float(available["prediction"].max())
+    eligible = available.loc[available["prediction"].astype(float) >= best_prediction - prediction_guard_margin]
+    return eligible if not eligible.empty else available
+
+
+def build_rerank_metrics(
+    *,
+    reranked: pd.DataFrame,
+    request_count: int,
+    changed_requests: int,
+    ranker_dir: Path,
+) -> dict[str, Any]:
     before_mrr = request_mrr(reranked, rank_column="pre_rank")
     after_mrr = request_mrr(reranked, rank_column="post_rank")
     return {
         "workflow_name": "constraint_aware_reranking",
+        "ranker_input_dir": str(ranker_dir),
         "request_count": request_count,
         "reranked_row_count": int(len(reranked)),
         "changed_request_count": int(changed_requests),
@@ -203,6 +228,10 @@ def build_rerank_manifest(
             "freshness_proxy": {
                 "description": "Boost items that have not been seen recently in prior event-log impressions.",
                 "weight": config["reranking"]["freshness_weight"],
+            },
+            "prediction_guard": {
+                "description": "Only allow reranking promotions among items whose model prediction stays within a configurable margin of the current best candidate.",
+                "margin": config["reranking"].get("prediction_guard_margin", 0.0),
             },
             "topic_diversity": {
                 "description": "Penalize repeated topics within the reranked request list.",

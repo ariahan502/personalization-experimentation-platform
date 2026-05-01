@@ -38,14 +38,22 @@ This pattern is used across event-log preparation, retrieval, ranking, reranking
 - Explicit reranking policy for freshness, diversity, and creator spread
 - Deterministic experiment assignment plus offline experiment readout with multiple outcomes, guardrails, slices, and SRM
 - Offline monitoring bundle for funnel coverage, score stability, and experiment integrity
-- Optional local ranked-feed API with replay and contextual scoring modes
+- Optional local ranked-feed API with replay, contextual scoring, and request-time candidate assembly modes
+- Explicit training-vs-serving contract for request schema, shared request-time fields, and unsupported offline-only ranking features
+- Lightweight request-time feature hydration using local state plus prior serving interaction logs
+- Explicit request-time fallback controls and degraded-mode observability for candidate assembly
+- Deterministic request-time experiment assignment and treatment-aware exposure logging
+- Live-style experiment readout over serving logs with SRM and fallback guardrails
+- Lifecycle readiness bundle with explicit promote, hold, and rollback guidance tied to offline monitoring and serving-log guardrails
 - Portfolio-facing reporting bundle and architecture note
 - Targeted stage-level tests plus GitHub Actions CI
 - One-command smoke validation via `bash scripts/ci_smoke.sh`
+- One-command medium retrieval and ranking validation via `bash scripts/ci_medium.sh`
+- Containerized runtime path for smoke and medium validation
 
 ## Roadmap Status
 
-The original four-phase roadmap has now been implemented as a smoke-validated end-to-end system.
+The original four-phase offline roadmap has now been implemented as a smoke-validated end-to-end system.
 
 - Phase 1: complete
 - Phase 2: complete
@@ -53,6 +61,7 @@ The original four-phase roadmap has now been implemented as a smoke-validated en
 - Phase 4: complete
 
 The repo now supports a reproducible path from event-log preparation through delivery/demo artifacts using only local configs and fixture-compatible assets.
+This means the offline scope is complete for the current project boundary; it does not mean the repo is a complete production recommender system.
 
 The extension phase is also complete for the current scope:
 
@@ -64,6 +73,8 @@ The extension phase is also complete for the current scope:
 - stronger experiment readout
 - engineering hardening
 - more realistic serving/demo behavior
+
+The remaining roadmap beyond this point is production-oriented expansion rather than missing offline baseline components.
 
 ## Next Expansion Opportunities
 
@@ -106,6 +117,7 @@ Expected outputs:
 - more targeted tests
 - CI automation
 - tighter dependency management or isolated environment guidance
+- clearer artifact lineage and run-to-run provenance
 
 Validation:
 

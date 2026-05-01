@@ -191,3 +191,51 @@ def test_build_treatment_summaries_tracks_repeat_rates_and_rerank_delta():
     assert summaries["control"]["top2_creator_repeat_rate"] == 0.5
     assert summaries["control"]["top2_topic_repeat_rate"] == 0.5
     assert summaries["control"]["mean_rerank_delta"] > 0.0
+    assert summaries["control"]["uncertainty"]["top1_ctr"]["sample_size"] == 2
+    assert summaries["control"]["uncertainty"]["mean_rerank_delta"]["sample_size"] == 3
+
+
+def test_build_primary_metrics_emits_uncertainty_when_available():
+    treatment_summaries = {
+        "control": {
+            "top1_ctr": 0.5,
+            "top2_ctr": 0.25,
+            "mean_label": 0.2,
+            "uncertainty": {
+                "top1_ctr": {"sample_size": 2},
+                "top2_ctr": {"sample_size": 2},
+                "mean_label": {"sample_size": 4},
+            },
+            "uncertainty_inputs": {
+                "top1_ctr_request_values": [1.0, 0.0],
+                "top2_ctr_request_values": [0.5, 0.0],
+                "mean_label_values": [1.0, 0.0, 0.0, 0.0],
+            },
+        },
+        "treatment": {
+            "top1_ctr": 1.0,
+            "top2_ctr": 0.5,
+            "mean_label": 0.4,
+            "uncertainty": {
+                "top1_ctr": {"sample_size": 2},
+                "top2_ctr": {"sample_size": 2},
+                "mean_label": {"sample_size": 4},
+            },
+            "uncertainty_inputs": {
+                "top1_ctr_request_values": [1.0, 1.0],
+                "top2_ctr_request_values": [0.5, 0.5],
+                "mean_label_values": [1.0, 1.0, 0.0, 0.0],
+            },
+        },
+    }
+    experiment = {
+        "treatments": [
+            {"treatment_id": "control", "is_control": True},
+            {"treatment_id": "treatment", "is_control": False},
+        ]
+    }
+
+    metrics = build_primary_metrics(treatment_summaries, experiment, config={"uncertainty": {"bootstrap_samples": 50}})
+
+    assert metrics["treatment"]["uncertainty"]["top1_ctr_lift_vs_control"]["candidate_sample_size"] == 2
+    assert metrics["treatment"]["uncertainty"]["mean_label"]["sample_size"] == 4

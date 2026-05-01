@@ -7,7 +7,13 @@ from typing import Any
 import yaml
 
 from personalization_platform.reranking.policy import rerank_feed
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -31,6 +37,13 @@ def main() -> None:
 
     reranked, metrics, manifest = rerank_feed(config)
     reranked.to_csv(output_dir / "reranked_rows.csv", index=False)
+    manifest = attach_lineage(
+        manifest,
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+        upstream_runs=[build_upstream_run_entry(label="ranker", path=metrics["ranker_input_dir"])],
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)

@@ -8,11 +8,26 @@ import pandas as pd
 
 from personalization_platform.retrieval.common import load_event_log_inputs
 
+CANDIDATE_REQUIRED_COLUMNS = {
+    "request_id",
+    "user_id",
+    "item_id",
+    "candidate_source",
+    "merged_rank",
+    "merged_score",
+    "source_rank",
+    "topic",
+    "source_count",
+    "source_list",
+    "source_details",
+}
+
 
 def build_ranking_dataset(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
     event_log_inputs = load_event_log_inputs(config)
     candidates_dir = resolve_candidates_dir(config)
     candidates = pd.read_csv(candidates_dir / "candidates.csv")
+    validate_candidates_frame(candidates, candidates_dir=candidates_dir)
 
     requests = event_log_inputs["requests"].copy()
     impressions = event_log_inputs["impressions"].copy()
@@ -47,6 +62,8 @@ def build_ranking_dataset(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[st
         on="request_id",
         how="left",
     )
+    validate_join_completeness(dataset)
+    dataset["event_log_input_dir"] = str(event_log_inputs["event_log_dir"])
 
     dataset["source_list_parsed"] = dataset["source_list"].map(json.loads)
     dataset["recent_topic_counts_parsed"] = dataset["recent_topic_counts"].map(json.loads)
@@ -104,6 +121,7 @@ def build_ranking_dataset(config: dict[str, Any]) -> tuple[pd.DataFrame, dict[st
         "source_details",
         "request_ts",
         "split",
+        "event_log_input_dir",
     ]
     dataset = dataset[output_columns]
 
@@ -124,9 +142,35 @@ def resolve_candidates_dir(config: dict[str, Any]) -> Path:
     return matches[-1]
 
 
+def validate_candidates_frame(candidates: pd.DataFrame, *, candidates_dir: Path) -> None:
+    if candidates.empty:
+        raise ValueError(
+            f"Candidate input at {candidates_dir} contains zero rows; ranking dataset build requires at least one candidate row."
+        )
+    missing_columns = sorted(CANDIDATE_REQUIRED_COLUMNS - set(candidates.columns))
+    if missing_columns:
+        raise ValueError(
+            f"Candidate input at {candidates_dir} is missing required columns: {', '.join(missing_columns)}."
+        )
+
+
+def validate_join_completeness(dataset: pd.DataFrame) -> None:
+    missing_request_features = dataset["request_ts"].isna() | dataset["history_click_count"].isna()
+    if missing_request_features.any():
+        missing_request_ids = sorted(dataset.loc[missing_request_features, "request_id"].astype(str).unique().tolist())
+        raise ValueError(
+            "Ranking dataset build found candidate rows without matching request or user-state context for request_ids: "
+            + ", ".join(missing_request_ids[:5])
+            + ("..." if len(missing_request_ids) > 5 else "")
+            + "."
+        )
+
+
 def assign_dataset_splits(*, dataset: pd.DataFrame, config: dict[str, Any]) -> pd.Series:
     split_config = config.get("split", {})
     strategy = split_config.get("strategy", "latest_timestamp_bucket")
+    if dataset.empty:
+        raise ValueError("Ranking dataset is empty before split assignment; verify candidate generation outputs.")
 
     if strategy == "latest_timestamp_bucket":
         unique_request_ts = sorted(dataset["request_ts"].unique())
@@ -153,12 +197,16 @@ def assign_dataset_splits(*, dataset: pd.DataFrame, config: dict[str, Any]) -> p
 
 
 def build_ranking_dataset_metrics(*, dataset: pd.DataFrame, candidates_dir: Path) -> dict[str, Any]:
+    event_log_input_dir = (
+        str(dataset["event_log_input_dir"].iloc[0]) if not dataset.empty and "event_log_input_dir" in dataset.columns else ""
+    )
     split_counts = dataset["dataset_split"].value_counts().to_dict()
     split_request_counts = dataset.groupby("dataset_split")["request_id"].nunique().to_dict()
     label_rate = float(dataset["label"].mean()) if not dataset.empty else 0.0
     return {
         "dataset_name": "ranking_dataset",
         "candidate_input_dir": str(candidates_dir),
+        "event_log_input_dir": event_log_input_dir,
         "row_count": int(len(dataset)),
         "request_count": int(dataset["request_id"].nunique()),
         "item_count": int(dataset["item_id"].nunique()),

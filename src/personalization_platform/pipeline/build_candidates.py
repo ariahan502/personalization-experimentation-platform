@@ -12,7 +12,13 @@ from personalization_platform.retrieval.affinity import build_affinity_source_ca
 from personalization_platform.retrieval.common import get_source_configs, load_event_log_inputs
 from personalization_platform.retrieval.content import build_content_source_candidates
 from personalization_platform.retrieval.trending import build_trending_manifest, build_trending_source_candidates
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -37,6 +43,13 @@ def main() -> None:
 
     candidates, metrics, manifest = build_candidates_bundle(config=config, output_dir=output_dir)
     candidates.to_csv(output_dir / "candidates.csv", index=False)
+    manifest = attach_lineage(
+        manifest,
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+        upstream_runs=[build_upstream_run_entry(label="event_log", path=metrics["event_log_input_dir"])],
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)
@@ -89,6 +102,11 @@ def build_candidates_bundle(
         source_frames=source_frames,
         final_candidate_count=int(config["retrieval"]["candidate_count"]),
     )
+    if merged_candidates.empty:
+        raise ValueError(
+            "Candidate generation produced zero rows across all configured sources. "
+            "Check event-log inputs, retrieval source settings, or fixture coverage."
+        )
     metrics = build_multi_source_metrics(
         merged_candidates=merged_candidates,
         source_metrics=source_metrics,

@@ -7,7 +7,13 @@ from typing import Any
 import yaml
 
 from personalization_platform.ranking.dataset import build_ranking_dataset
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -31,6 +37,16 @@ def main() -> None:
 
     dataset, metrics, manifest = build_ranking_dataset(config)
     dataset.to_csv(output_dir / "ranking_dataset.csv", index=False)
+    manifest = attach_lineage(
+        manifest,
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+        upstream_runs=[
+            build_upstream_run_entry(label="event_log", path=metrics["event_log_input_dir"]),
+            build_upstream_run_entry(label="candidates", path=metrics["candidate_input_dir"]),
+        ],
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)

@@ -1,0 +1,36 @@
+run_name: simulated_serving_smoke
+
+input:
+  rerank_base_dir: data/processed/reranked_feed
+  rerank_run_name: rerank_smoke
+
+api_name: deterministic_replay_simulator
+
+experiment:
+  experiment_id: simulated_serving_exp_v1
+  assignment_unit: request_id
+  salt: simulated_serving_seed_v1
+  treatments:
+    - treatment_id: control
+      treatment_name: control_ranker_only
+      weight: 0.5
+      is_control: true
+    - treatment_id: reranked_policy
+      treatment_name: reranked_feed_policy
+      weight: 0.5
+      is_control: false
+
+simulation:
+  assignment_strategy: paired_treatment_replay
+  rounds: 20
+  top_k: 2
+  random_seed: 17
+  base_timestamp: "2026-04-30T12:00:00Z"
+  positive_click_probability: 0.8
+  negative_click_probability: 0.05
+  position_decay:
+    - 1.0
+    - 0.7
+
+artifacts:
+  base_dir: artifacts/runs

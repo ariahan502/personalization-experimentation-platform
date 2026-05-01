@@ -1,0 +1,35 @@
+run_name: live_experiment_readout_smoke
+
+input:
+  local_api_base_dir: artifacts/runs
+  local_api_run_name: local_api_smoke
+
+experiment:
+  experiment_id: local_api_serving_exp_v1
+  assignment_unit: user_id
+  salt: local_api_serving_seed_v1
+  treatments:
+    - treatment_id: control
+      treatment_name: control_ranker_only
+      weight: 0.5
+      is_control: true
+    - treatment_id: reranked_policy
+      treatment_name: reranked_feed_policy
+      weight: 0.5
+      is_control: false
+
+diagnostics:
+  history_segments:
+    - name: cold_start
+      min_history_length: 0
+      max_history_length: 0
+    - name: short_history
+      min_history_length: 1
+      max_history_length: 2
+
+uncertainty:
+  bootstrap_samples: 50
+  confidence_level: 0.95
+
+artifacts:
+  base_dir: artifacts/runs

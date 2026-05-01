@@ -5,6 +5,8 @@ input:
   rerank_run_name: rerank_smoke
   event_log_base_dir: data/interim/event_logs
   event_log_run_name: mind_smoke_event_log
+  serving_log_base_dir: artifacts/runs
+  serving_log_run_name: local_api_smoke
 
 api:
   api_name: local_ranked_feed_api
@@ -15,32 +17,127 @@ api:
     topic_affinity_weight: 1.0
     click_prior_weight: 0.5
     impression_prior_weight: 0.2
+    recent_topic_click_weight: 0.35
+    recent_item_ctr_weight: 0.25
+    recent_user_activity_weight: 0.15
     history_seen_penalty: 0.75
     freshness_weight: 0.35
     topic_repeat_penalty: 0.2
     creator_repeat_penalty: 0.15
 
-smoke_request:
-  request_id: train-request-6
-  user_id: U200
-  top_k: 3
+request_time_retrieval:
+  candidate_count: 6
+  max_sources_per_request: 3
+  fallback_to_trending_only: true
+  trending_fallback_candidate_count: 6
+  sources:
+    - name: affinity
+      candidate_count: 4
+      priority: 1
+    - name: content
+      candidate_count: 4
+      priority: 2
+    - name: trending
+      candidate_count: 4
+      priority: 3
 
-contextual_smoke_request:
-  request_id: contextual-U200
-  user_id: U200
-  top_k: 3
-  history_item_ids:
-    - N102
-    - N103
-  history_topics:
-    - Sports
-    - Finance
-    - Sports
-  candidate_items:
-    - item_id: N102
-    - item_id: N103
-    - item_id: N106
-    - item_id: N105
+experiment:
+  experiment_id: local_api_serving_exp_v1
+  assignment_unit: user_id
+  salt: local_api_serving_seed_v1
+  treatments:
+    - treatment_id: control
+      treatment_name: control_ranker_only
+      weight: 0.5
+      is_control: true
+    - treatment_id: reranked_policy
+      treatment_name: reranked_feed_policy
+      weight: 0.5
+      is_control: false
+
+smoke_requests:
+  - request_id: train-request-2
+    user_id: U100
+    top_k: 3
+    simulated_clicked_item_ids:
+      - N105
+  - request_id: train-request-3
+    user_id: U100
+    top_k: 3
+    simulated_clicked_item_ids:
+      - N101
+  - request_id: train-request-4
+    user_id: U200
+    top_k: 3
+    simulated_clicked_item_ids:
+      - N106
+  - request_id: train-request-5
+    user_id: U200
+    top_k: 3
+    simulated_clicked_item_ids:
+      - N103
+
+contextual_smoke_requests:
+  - request_id: contextual-U300
+    user_id: U300
+    top_k: 3
+    history_item_ids:
+      - N102
+      - N103
+    history_topics:
+      - Sports
+      - Finance
+      - Sports
+    candidate_items:
+      - item_id: N102
+      - item_id: N103
+      - item_id: N106
+      - item_id: N105
+    simulated_clicked_item_ids:
+      - N102
+  - request_id: contextual-U400
+    user_id: U400
+    top_k: 3
+    history_item_ids:
+      - N104
+      - N105
+    history_topics:
+      - Health
+      - Entertainment
+      - Health
+    candidate_items:
+      - item_id: N101
+      - item_id: N104
+      - item_id: N105
+      - item_id: N106
+    simulated_clicked_item_ids:
+      - N104
+
+assembled_smoke_requests:
+  - request_id: assembled-U500
+    user_id: U500
+    top_k: 3
+    history_item_ids:
+      - N101
+      - N104
+    history_topics:
+      - Health
+      - Health
+      - World
+    simulated_clicked_item_ids:
+      - N101
+  - request_id: assembled-U900
+    user_id: U900
+    top_k: 3
+    history_item_ids:
+      - N102
+      - N103
+    history_topics:
+      - Sports
+      - Finance
+      - Sports
+    simulated_clicked_item_ids:
+      - N105
 
 artifacts:
   base_dir: artifacts/runs

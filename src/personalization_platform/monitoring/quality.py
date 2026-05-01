@@ -55,11 +55,13 @@ def analyze_monitoring(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str
     ]
 
     flagged_checks = [check for check in checks if check["status"] != "pass"]
+    observability = build_observability_summary(inputs=inputs, checks=checks, flagged_checks=flagged_checks)
     summary = {
         "monitoring_name": config.get("run_name", "monitoring_smoke"),
         "overall_status": "warn" if flagged_checks else "pass",
         "flagged_check_count": len(flagged_checks),
         "checks": checks,
+        "observability": observability["headline"],
         "stage_funnel": funnel,
         "event_log": event_log_summary["headline"],
         "candidate_quality": candidate_summary["headline"],
@@ -77,6 +79,7 @@ def analyze_monitoring(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str
         "rerank_activity": rerank_summary,
         "experiment_integrity": experiment_summary,
         "checks": checks,
+        "observability": observability,
         "caveats": [
             "This monitoring bundle is an offline smoke-quality view, not a production monitoring system.",
             "Train-valid drift on the tiny fixture is useful for plumbing checks but not for operational thresholds in a live feed.",
@@ -172,6 +175,45 @@ def build_event_log_summary(requests: pd.DataFrame, impressions: pd.DataFrame) -
             for key, value in requests.groupby("split")["history_length"].mean().to_dict().items()
         },
         "top_impression_topics": top_share_dict(topic_mix, limit=5),
+    }
+
+
+def build_observability_summary(
+    *,
+    inputs: dict[str, Any],
+    checks: list[dict[str, Any]],
+    flagged_checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    input_dir_status = [
+        {
+            "name": name,
+            "path": path,
+            "status": "present" if Path(path).exists() else "missing",
+        }
+        for name, path in inputs["input_dirs"].items()
+    ]
+    degraded_stages = [check["name"] for check in flagged_checks]
+    return {
+        "headline": {
+            "input_dir_count": len(input_dir_status),
+            "present_input_dir_count": sum(1 for row in input_dir_status if row["status"] == "present"),
+            "check_pass_rate": (len(checks) - len(flagged_checks)) / len(checks) if checks else 1.0,
+            "degraded_stage_count": len(degraded_stages),
+        },
+        "input_dir_status": input_dir_status,
+        "degraded_stages": degraded_stages,
+        "stage_row_counts": {
+            "event_log_requests": int(inputs["requests"]["request_id"].nunique()),
+            "candidate_rows": int(len(inputs["candidates"])),
+            "ranking_dataset_rows": int(len(inputs["ranking_dataset"])),
+            "scored_rows": int(len(inputs["scored_rows"])),
+            "reranked_rows": int(len(inputs["reranked_rows"])),
+        },
+        "health_contract": {
+            "checks_evaluated": len(checks),
+            "warn_checks": len(flagged_checks),
+            "check_names": [check["name"] for check in checks],
+        },
     }
 
 

@@ -7,7 +7,13 @@ from typing import Any
 import yaml
 
 from personalization_platform.ranking.comparison import compare_rankers
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -28,9 +34,27 @@ def main() -> None:
     run_dir = create_run_dir(run_name, base_dir=config["artifacts"]["base_dir"])
 
     metrics, diagnostics = compare_rankers(config)
+    manifest = attach_lineage(
+        {
+            "comparison_name": metrics["comparison_name"],
+            "primary_variant_name": metrics["primary_variant_name"],
+            "variant_names": sorted(metrics["variants"].keys()),
+            "ranking_dataset_input_dir": metrics["ranking_dataset_input_dir"],
+            "assumptions": [
+                "All compared variants consume the same ranking dataset input dir for reproducible offline comparison.",
+                "The retrieval-order baseline is materialized alongside trained variants so deltas are easy to audit.",
+            ],
+        },
+        run_dir=run_dir,
+        config=config,
+        upstream_runs=[
+            build_upstream_run_entry(label="ranking_dataset", path=metrics["ranking_dataset_input_dir"])
+        ],
+    )
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)
     write_json(run_dir / "diagnostics.json", diagnostics)
+    write_json(run_dir / "manifest.json", manifest)
     print(f"Wrote ranker comparison bundle to {run_dir}")
 
 

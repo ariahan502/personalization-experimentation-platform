@@ -1,0 +1,32 @@
+run_name: model_lifecycle_smoke
+
+input:
+  ranker_base_dir: artifacts/runs
+  ranker_run_name: ranker_smoke
+  ranker_compare_base_dir: artifacts/runs
+  ranker_compare_run_name: ranker_compare_smoke
+  monitoring_base_dir: artifacts/runs
+  monitoring_run_name: monitoring_smoke
+  live_experiment_base_dir: artifacts/runs
+  live_experiment_run_name: live_experiment_readout_smoke
+
+policy:
+  candidate_treatment_id: reranked_policy
+  control_treatment_id: control
+  fallback_treatment_id: control
+  fallback_variant_name: retrieval_order_baseline
+  serving_action: Route serving back to the control treatment and retrieval-order baseline until the candidate model is retrained.
+
+thresholds:
+  min_offline_mrr_delta: 0.0
+  max_offline_log_loss_delta: 0.0
+  min_control_request_count: 2
+  min_candidate_request_count: 2
+  min_live_srm_p_value: 0.05
+  min_live_top1_ctr_lift: 0.0
+  min_live_top1_ctr_lift_ci_lower: -0.1
+  max_live_degraded_request_rate: 0.5
+  max_live_fallback_request_rate: 0.5
+
+artifacts:
+  base_dir: artifacts/runs

@@ -1,6 +1,7 @@
 import pandas as pd
 
 from personalization_platform.ranking.comparison import (
+    build_metric_delta_uncertainty,
     build_segment_delta_summary,
     build_slice_summary,
 )
@@ -112,3 +113,27 @@ def test_build_segment_delta_summary_compares_primary_against_retrieval():
     assert short_history["segment"] == "short_history"
     assert short_history["request_count"] == 1
     assert short_history["metric_deltas"]["classification.accuracy"] == 1.0
+
+
+def test_build_metric_delta_uncertainty_emits_paired_request_intervals():
+    primary_rows = pd.DataFrame(
+        [
+            {"request_id": "r1", "item_id": "i1", "label": 1, "prediction": 0.9, "predicted_label": 1, "merged_rank": 1},
+            {"request_id": "r1", "item_id": "i2", "label": 0, "prediction": 0.1, "predicted_label": 0, "merged_rank": 2},
+            {"request_id": "r2", "item_id": "i3", "label": 0, "prediction": 0.8, "predicted_label": 1, "merged_rank": 1},
+            {"request_id": "r2", "item_id": "i4", "label": 1, "prediction": 0.2, "predicted_label": 0, "merged_rank": 2},
+        ]
+    )
+    fallback_rows = primary_rows.copy()
+    fallback_rows["prediction"] = [0.6, 0.4, 0.7, 0.3]
+    fallback_rows["predicted_label"] = [1, 0, 1, 0]
+
+    summary = build_metric_delta_uncertainty(
+        candidate_rows=primary_rows,
+        baseline_rows=fallback_rows,
+        config={"uncertainty": {"bootstrap_samples": 50, "random_seed": 7}},
+    )
+
+    assert summary["ranking.mean_reciprocal_rank"]["candidate_sample_size"] == 2
+    assert summary["classification.accuracy"]["baseline_sample_size"] == 4
+    assert summary["ranking.hit_rate_at_1"]["method"] == "paired_bootstrap_mean_delta"

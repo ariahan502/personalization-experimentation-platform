@@ -7,6 +7,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from personalization_platform.evaluation.uncertainty import summarize_mean_delta, summarize_mean_metric
+
 DEFAULT_HISTORY_SEGMENTS = [
     {"name": "cold_start", "min_history_length": 0, "max_history_length": 0},
     {"name": "short_history", "min_history_length": 1, "max_history_length": 2},
@@ -21,8 +23,8 @@ def analyze_experiment(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str
     assigned_exposures = pd.read_csv(assignment_dir / "assigned_exposures.csv")
     experiment = config["experiment"]
 
-    treatment_summaries = build_treatment_summaries(assignments, assigned_exposures)
-    primary_metrics = build_primary_metrics(treatment_summaries, experiment)
+    treatment_summaries = build_treatment_summaries(assignments, assigned_exposures, config=config)
+    primary_metrics = build_primary_metrics(treatment_summaries, experiment, config=config)
     guardrails = build_guardrail_metrics(treatment_summaries, experiment)
     srm_check = build_srm_check(assignments, experiment)
     diagnostics = build_treatment_diagnostics(assigned_exposures, config=config)
@@ -35,6 +37,7 @@ def analyze_experiment(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str
         "guardrails": guardrails,
         "srm_check": srm_check,
         "treatment_summaries": treatment_summaries,
+        "sample_size_summary": build_sample_size_summary(treatment_summaries),
     }
     readout_bundle = {
         "experiment_id": experiment["experiment_id"],
@@ -50,11 +53,13 @@ def analyze_experiment(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str
             "guardrail.top1_topic_concentration": "Largest single-topic share among top-1 exposures within the treatment.",
             "guardrail.mean_prediction": "Average pre-rerank model prediction over assigned exposures.",
             "guardrail.mean_rerank_delta": "Average difference between rerank_score and model prediction over assigned exposures.",
+            "uncertainty": "Confidence summaries use deterministic bootstrap intervals over request-level or exposure-level outcomes, depending on the metric.",
             "srm": "Chi-square sample-ratio mismatch check against configured treatment weights on assignment units.",
         },
         "diagnostics": diagnostics,
         "caveats": [
             "This readout is based on offline smoke fixtures and simulated treatment assignment, not online experiment traffic.",
+            build_scale_caveat(treatment_summaries),
             "Primary metrics are useful for pipeline validation and structure only; they are not statistically reliable decision evidence at this scale.",
             "SRM is included as an integrity check even though the smoke sample is intentionally tiny.",
         ],
@@ -77,13 +82,20 @@ def resolve_assignment_dir(config: dict[str, Any]) -> Path:
 def build_treatment_summaries(
     assignments: pd.DataFrame,
     assigned_exposures: pd.DataFrame,
+    *,
+    config: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
+    resolved_config = config or {}
     summaries: dict[str, dict[str, Any]] = {}
     assignment_lookup = assignments.groupby("treatment_id")
     exposure_lookup = assigned_exposures.groupby("treatment_id")
 
     for treatment_id, assignment_rows in assignment_lookup:
         exposure_rows = exposure_lookup.get_group(treatment_id)
+        request_inputs = build_request_outcome_series(exposure_rows)
+        exposure_inputs = build_exposure_outcome_series(exposure_rows)
+        uncertainty_inputs = request_inputs | exposure_inputs
+        uncertainty = build_treatment_uncertainty(uncertainty_inputs, config=resolved_config)
         summaries[treatment_id] = {
             "request_count": int(assignment_rows["request_id"].nunique()),
             "assignment_unit_count": int(assignment_rows["assignment_unit_id"].nunique()),
@@ -108,6 +120,8 @@ def build_treatment_summaries(
                 str(key): int(value)
                 for key, value in exposure_rows.loc[exposure_rows["post_rank"] == 1, "creator_id"].value_counts().to_dict().items()
             },
+            "uncertainty": uncertainty,
+            "uncertainty_inputs": uncertainty_inputs,
         }
     return summaries
 
@@ -125,7 +139,10 @@ def topk_ctr(rows: pd.DataFrame, *, k: int) -> float:
 def build_primary_metrics(
     treatment_summaries: dict[str, dict[str, Any]],
     experiment: dict[str, Any],
+    *,
+    config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    resolved_config = config or {}
     control_id = control_treatment_id(experiment)
     control_summary = treatment_summaries[control_id]
     metrics: dict[str, Any] = {"metric_name": "top1_ctr", "control_treatment_id": control_id}
@@ -140,6 +157,34 @@ def build_primary_metrics(
             "mean_label": treatment_summary["mean_label"],
             "mean_label_lift_vs_control": treatment_summary["mean_label"] - control_summary["mean_label"],
         }
+        if (
+            "uncertainty" in treatment_summary
+            and "uncertainty_inputs" in treatment_summary
+            and "uncertainty_inputs" in control_summary
+        ):
+            metrics[treatment_id]["uncertainty"] = {
+                "top1_ctr": treatment_summary["uncertainty"]["top1_ctr"],
+                "top1_ctr_lift_vs_control": summarize_mean_delta(
+                    treatment_summary["uncertainty_inputs"]["top1_ctr_request_values"],
+                    control_summary["uncertainty_inputs"]["top1_ctr_request_values"],
+                    metric_name="top1_ctr_lift_vs_control",
+                    config=resolved_config,
+                ),
+                "top2_ctr": treatment_summary["uncertainty"]["top2_ctr"],
+                "top2_ctr_lift_vs_control": summarize_mean_delta(
+                    treatment_summary["uncertainty_inputs"]["top2_ctr_request_values"],
+                    control_summary["uncertainty_inputs"]["top2_ctr_request_values"],
+                    metric_name="top2_ctr_lift_vs_control",
+                    config=resolved_config,
+                ),
+                "mean_label": treatment_summary["uncertainty"]["mean_label"],
+                "mean_label_lift_vs_control": summarize_mean_delta(
+                    treatment_summary["uncertainty_inputs"]["mean_label_values"],
+                    control_summary["uncertainty_inputs"]["mean_label_values"],
+                    metric_name="mean_label_lift_vs_control",
+                    config=resolved_config,
+                ),
+            }
     return metrics
 
 
@@ -160,7 +205,121 @@ def build_guardrail_metrics(
             "top1_creator_concentration": concentration(summary["top1_creator_mix"]),
             "top1_topic_concentration": concentration(summary["top1_topic_mix"]),
         }
+        if "uncertainty" in summary:
+            guardrails[treatment_id]["uncertainty"] = {
+                "average_rank_shift": summary["uncertainty"]["average_rank_shift"],
+                "mean_prediction": summary["uncertainty"]["mean_prediction"],
+                "mean_rerank_delta": summary["uncertainty"]["mean_rerank_delta"],
+                "top2_creator_repeat_rate": summary["uncertainty"]["top2_creator_repeat_rate"],
+                "top2_topic_repeat_rate": summary["uncertainty"]["top2_topic_repeat_rate"],
+            }
     return guardrails
+
+
+def build_treatment_uncertainty(
+    uncertainty_inputs: dict[str, list[float]],
+    *,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "top1_ctr": summarize_mean_metric(
+            uncertainty_inputs["top1_ctr_request_values"],
+            metric_name="top1_ctr",
+            config=config,
+        ),
+        "top2_ctr": summarize_mean_metric(
+            uncertainty_inputs["top2_ctr_request_values"],
+            metric_name="top2_ctr",
+            config=config,
+        ),
+        "mean_label": summarize_mean_metric(
+            uncertainty_inputs["mean_label_values"],
+            metric_name="mean_label",
+            config=config,
+        ),
+        "average_rank_shift": summarize_mean_metric(
+            uncertainty_inputs["average_rank_shift_values"],
+            metric_name="average_rank_shift",
+            config=config,
+        ),
+        "mean_prediction": summarize_mean_metric(
+            uncertainty_inputs["mean_prediction_values"],
+            metric_name="mean_prediction",
+            config=config,
+        ),
+        "mean_rerank_delta": summarize_mean_metric(
+            uncertainty_inputs["mean_rerank_delta_values"],
+            metric_name="mean_rerank_delta",
+            config=config,
+        ),
+        "top2_creator_repeat_rate": summarize_mean_metric(
+            uncertainty_inputs["top2_creator_repeat_request_values"],
+            metric_name="top2_creator_repeat_rate",
+            config=config,
+        ),
+        "top2_topic_repeat_rate": summarize_mean_metric(
+            uncertainty_inputs["top2_topic_repeat_request_values"],
+            metric_name="top2_topic_repeat_rate",
+            config=config,
+        ),
+    }
+
+
+def build_request_outcome_series(exposure_rows: pd.DataFrame) -> dict[str, list[float]]:
+    top1_values: list[float] = []
+    top2_values: list[float] = []
+    creator_repeat_values: list[float] = []
+    topic_repeat_values: list[float] = []
+    for _, request_rows in exposure_rows.groupby("request_id", sort=True):
+        top1_rows = request_rows.loc[request_rows["post_rank"] == 1]
+        top2_rows = request_rows.loc[request_rows["post_rank"] <= 2]
+        top1_values.append(float(top1_rows["label"].mean()) if len(top1_rows) else 0.0)
+        top2_values.append(float(top2_rows["label"].mean()) if len(top2_rows) else 0.0)
+        top2_creators = top2_rows["creator_id"].astype(str).tolist()
+        top2_topics = top2_rows["topic"].astype(str).tolist()
+        creator_repeat_values.append(float(len(top2_creators) > 0 and len(set(top2_creators)) < len(top2_creators)))
+        topic_repeat_values.append(float(len(top2_topics) > 0 and len(set(top2_topics)) < len(top2_topics)))
+    return {
+        "top1_ctr_request_values": top1_values,
+        "top2_ctr_request_values": top2_values,
+        "top2_creator_repeat_request_values": creator_repeat_values,
+        "top2_topic_repeat_request_values": topic_repeat_values,
+    }
+
+
+def build_exposure_outcome_series(exposure_rows: pd.DataFrame) -> dict[str, list[float]]:
+    rerank_delta = (
+        (exposure_rows["rerank_score"] - exposure_rows["prediction"]).astype(float)
+        if len(exposure_rows)
+        else pd.Series(dtype=float)
+    )
+    return {
+        "mean_label_values": exposure_rows["label"].astype(float).tolist(),
+        "average_rank_shift_values": exposure_rows["rank_shift"].abs().astype(float).tolist(),
+        "mean_prediction_values": exposure_rows["prediction"].astype(float).tolist(),
+        "mean_rerank_delta_values": rerank_delta.tolist(),
+    }
+
+
+def build_sample_size_summary(treatment_summaries: dict[str, dict[str, Any]]) -> dict[str, dict[str, int]]:
+    return {
+        treatment_id: {
+            "request_count": int(summary["request_count"]),
+            "assignment_unit_count": int(summary["assignment_unit_count"]),
+            "exposure_row_count": int(summary["exposure_row_count"]),
+            "top1_request_count": int(summary["uncertainty"]["top1_ctr"]["sample_size"]),
+            "top2_request_count": int(summary["uncertainty"]["top2_ctr"]["sample_size"]),
+        }
+        for treatment_id, summary in treatment_summaries.items()
+    }
+
+
+def build_scale_caveat(treatment_summaries: dict[str, dict[str, Any]]) -> str:
+    size_notes = [
+        f"{treatment_id} top-1 CTR uses {summary['uncertainty']['top1_ctr']['sample_size']} requests"
+        for treatment_id, summary in sorted(treatment_summaries.items())
+    ]
+    return "Sample sizes remain tiny: " + ", ".join(size_notes) + "."
 
 
 def build_srm_check(assignments: pd.DataFrame, experiment: dict[str, Any]) -> dict[str, Any]:

@@ -7,7 +7,13 @@ from typing import Any
 import yaml
 
 from personalization_platform.experiments.assignment import assign_experiment
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -32,6 +38,13 @@ def main() -> None:
     assignments, assigned_exposures, metrics, manifest = assign_experiment(config)
     assignments.to_csv(output_dir / "assignments.csv", index=False)
     assigned_exposures.to_csv(output_dir / "assigned_exposures.csv", index=False)
+    manifest = attach_lineage(
+        manifest,
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+        upstream_runs=[build_upstream_run_entry(label="rerank", path=metrics["rerank_input_dir"])],
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)

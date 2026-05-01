@@ -11,7 +11,13 @@ from personalization_platform.ranking.logistic_baseline import (
     train_ranker_model,
     write_model_pickle,
 )
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import (
+    attach_lineage,
+    build_upstream_run_entry,
+    create_run_dir,
+    write_json,
+    write_yaml,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -37,6 +43,15 @@ def main() -> None:
     model_artifacts = metrics["model_artifacts"]
     write_model_pickle(output_dir / "model.pkl", model_artifacts)
     scored_rows.to_csv(output_dir / "scored_rows.csv", index=False)
+    manifest = attach_lineage(
+        manifest,
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+        upstream_runs=[
+            build_upstream_run_entry(label="ranking_dataset", path=metrics["ranking_dataset_input_dir"])
+        ],
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", sanitize_metrics_for_json(metrics))

@@ -7,38 +7,19 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from personalization_platform.features.contracts import (
+    DEFAULT_BINARY_TRAINING_FEATURES,
+    DEFAULT_CATEGORICAL_TRAINING_FEATURES,
+    DEFAULT_NUMERIC_TRAINING_FEATURES,
+)
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 
-
-DEFAULT_NUMERIC_FEATURES = [
-    "merged_rank",
-    "normalized_merged_rank",
-    "merged_score",
-    "source_rank",
-    "source_count",
-    "candidate_count",
-    "history_length",
-    "history_click_count",
-    "topic_history_count",
-    "request_index_in_session",
-    "request_hour",
-]
-DEFAULT_BINARY_FEATURES = [
-    "has_multi_source_provenance",
-    "has_affinity_source",
-    "has_trending_source",
-    "is_affinity_primary",
-    "is_trending_primary",
-    "is_cold_start",
-    "candidate_seen_in_impressions",
-]
-DEFAULT_CATEGORICAL_FEATURES = [
-    "candidate_source",
-    "topic",
-]
+DEFAULT_NUMERIC_FEATURES = DEFAULT_NUMERIC_TRAINING_FEATURES
+DEFAULT_BINARY_FEATURES = DEFAULT_BINARY_TRAINING_FEATURES
+DEFAULT_CATEGORICAL_FEATURES = DEFAULT_CATEGORICAL_TRAINING_FEATURES
 
 
 MODEL_NAME_BY_TYPE = {

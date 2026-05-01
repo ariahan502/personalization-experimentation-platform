@@ -33,6 +33,10 @@ run_step "Monitor smoke quality" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.monitor_quality --config configs/monitoring_smoke.yaml
 run_step "Smoke local ranked-feed API" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
+run_step "Analyze live-style experiment logs" \
+  env PYTHONPATH=src python -m personalization_platform.pipeline.analyze_live_experiment --config configs/live_experiment_smoke.yaml
+run_step "Evaluate model lifecycle readiness" \
+  env PYTHONPATH=src python -m personalization_platform.pipeline.evaluate_model_lifecycle --config configs/model_lifecycle_smoke.yaml
 run_step "Build portfolio reporting bundle" \
   env PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 

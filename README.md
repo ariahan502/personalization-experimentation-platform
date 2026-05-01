@@ -15,9 +15,11 @@ The current raw interaction source is `MIND`, the Microsoft News Dataset. In thi
 
 ## At A Glance
 
-- finished baseline system: event log -> retrieval -> ranking -> reranking -> experimentation -> monitoring -> local API -> reporting
+- completed offline system for the current repo scope: event log -> retrieval -> ranking -> reranking -> experimentation -> monitoring -> local API -> reporting
 - extension phase complete for the current repo scope: richer validation data, deeper retrieval, multiple ranker families, segmented diagnostics, stronger experiment readout, targeted tests, CI, and contextual API scoring
 - fastest validation path: `bash scripts/ci_smoke.sh`
+- richer retrieval-and-ranking validation path: `bash scripts/ci_medium.sh`
+- production boundary: this repo is an offline experimentation platform and local demo surface, not a production recommender stack
 
 ## Process
 
@@ -40,11 +42,18 @@ The current end-to-end flow is:
 
 Each stage is implemented as package code under `src/personalization_platform/`, configured through `configs/`, and validated by writing artifact bundles under `artifacts/runs/`.
 
+Run manifests now carry normalized lineage metadata:
+
+- `run_metadata` records the current run id, timestamp, run name, artifact path, and output path when applicable
+- `upstream_runs` records the labeled upstream run ids, run names, timestamps, and paths consumed by the current stage
+
+This makes it possible to inspect stage provenance directly from `manifest.json` files instead of inferring lineage only from directory names.
+
 The current highest-signal local commands are:
 
 ```bash
 bash scripts/ci_smoke.sh
-PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_medium.yaml
+bash scripts/ci_medium.sh
 PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
 PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 ```
@@ -63,6 +72,7 @@ What exists today:
 - portfolio-facing reporting bundle with a system summary and architecture note
 - targeted unit tests for retrieval merge logic, segmented ranking diagnostics, reranking helpers, and experiment assignment
 - one-command repo smoke validation via `bash scripts/ci_smoke.sh`
+- one-command medium retrieval and ranking validation via `bash scripts/ci_medium.sh`
 - GitHub Actions CI that runs the same smoke-quality command on pushes and pull requests
 
 ## Completed Extensions
@@ -76,7 +86,13 @@ Beyond the first end-to-end baseline, the repo now also includes:
 - segmented ranking diagnostics by candidate source, provenance, cold-start status, and history depth
 - stronger experiment readout with multiple outcomes, richer guardrails, and treatment slices
 - targeted stage-level tests plus GitHub Actions CI
-- a local API that supports both fixture replay and contextual candidate-payload scoring
+- a local API that supports fixture replay, contextual candidate-payload scoring, and request-time candidate assembly from local retrieval sources
+- an explicit training-vs-serving feature contract so request-time inputs and offline-only ranker features stay clearly separated
+- local serving interaction logs for request, exposure, response, and simulated click events
+- lightweight request-time feature hydration from local state and prior serving logs, with explicit fallback behavior
+- explicit request-time assembly controls for source budgets, trending-only fallback, and degraded-mode observability
+- deterministic request-time experiment assignment with treatment metadata persisted in serving responses and logs
+- live-style experiment readout over serving logs, including SRM, concentration, fallback rate, and degraded request rate
 
 ## Repository Layout
 
@@ -116,6 +132,14 @@ The current implementation uses MIND as the raw source and reshapes it into a pr
 
 This is an honest offline engineering pattern: use a real public interaction dataset, then build the missing request-level and operational surfaces needed for retrieval, ranking, reranking, and experimentation. The repo does not claim production traffic or online outcomes, but it does implement a real multi-stage system around realistic feed-ranking problems.
 
+For portfolio or resume framing, the honest description is:
+
+- reproducible offline personalization and experimentation platform
+- request-level event-log build over MIND
+- multi-source retrieval, baseline ranking, reranking constraints, experiment readout, monitoring, and local demo API
+
+The repo should not be framed as a live production recommender system or as evidence of online lift on real traffic.
+
 ## Setup
 
 Install dependencies with:
@@ -127,7 +151,8 @@ pip install -r requirements.txt
 For editable local development:
 
 ```bash
-pip install -e ".[dev]"
+pip install -r requirements-dev.txt
+pip install -e .
 ```
 
 Commands use the `src/` layout directly:
@@ -135,6 +160,45 @@ Commands use the `src/` layout directly:
 ```bash
 PYTHONPATH=src python -m ...
 ```
+
+The repo now pins the Python package versions used by the local validation workflows in:
+
+- `requirements.txt`
+- `requirements-dev.txt`
+- `pyproject.toml`
+
+That keeps `pip install -e .`, `pip install -r requirements.txt`, and the packaged runtime aligned on the same dependency set.
+
+## Packaged Runtime
+
+For a reproducible containerized runtime, the repo includes:
+
+- `Dockerfile`
+- `.dockerignore`
+- `scripts/docker_smoke.sh`
+- `scripts/docker_medium.sh`
+
+Build and run the packaged smoke validation with:
+
+```bash
+bash scripts/docker_smoke.sh
+```
+
+Build and run the packaged medium validation with:
+
+```bash
+bash scripts/docker_medium.sh
+```
+
+If you prefer the raw Docker commands, they are:
+
+```bash
+docker build -t personalization-platform:local .
+docker run --rm personalization-platform:local bash scripts/ci_smoke.sh
+docker run --rm personalization-platform:local bash scripts/ci_medium.sh
+```
+
+The container image is intentionally thin and includes the fixture data plus the repo-local validation commands, but it does not include large raw datasets or previously generated artifacts.
 
 ## Demo Path
 
@@ -154,8 +218,34 @@ This smoke script validates the whole project chain:
 - reranking
 - experiment assignment and readout
 - monitoring
+- local serving smoke
+- live-style experiment readout from serving logs
+- lifecycle promotion and rollback evaluation
+
+The default serving smoke requests intentionally span multiple users and both experiment treatments so the live readout and lifecycle bundle exercise a less toy-like control-versus-candidate comparison.
+
+For a stronger synthetic-live validation tier, the repo also includes a deterministic replay simulation that generates larger serving-log bundles directly from `reranked_rows.csv` with fixed seeds and no dependency on prior `local_api_smoke` artifacts.
+
+The reranking policy now also supports a prediction guard margin so freshness and diversity logic can promote plausible alternatives without letting very weak candidates leapfrog obvious high-score winners.
 - local API replay and contextual scoring
 - portfolio reporting bundle
+
+If you changed retrieval, ranking, or evaluation logic and want a richer offline check, run:
+
+```bash
+bash scripts/ci_medium.sh
+```
+
+This medium validation script focuses on the ranking stack:
+
+- medium event-log config validation
+- medium event-log build
+- medium candidate generation
+- medium ranking dataset build
+- medium logistic baseline training
+- medium multi-model comparison diagnostics
+
+Use `ci_smoke.sh` as the fastest repo health check and `ci_medium.sh` as the default follow-up after substantive retrieval or ranking changes.
 
 For a smaller demo flow after the smoke run succeeds:
 
@@ -164,7 +254,40 @@ PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --c
 PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 ```
 
-The first command validates both replay mode and contextual scoring mode for the local ranked-feed API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
+The first command validates replay mode, contextual scoring mode, and request-time candidate assembly for the local ranked-feed API. The second packages the latest smoke artifacts into a concise system summary and architecture note.
+
+The local API smoke bundle now also writes a `serving_contract.json` artifact that records the accepted request schema, the current contextual feature surface, and the offline ranker features that are not yet supported online.
+
+It also writes append-only local interaction logs:
+
+- `request_events.csv`
+- `exposure_events.csv`
+- `response_events.csv`
+- `click_events.csv`
+
+These files are the first online-style logging surface for the repo. They are still local smoke artifacts, but they make the serving-to-experimentation boundary explicit and reusable.
+
+When a prior local API smoke bundle exists, the serving layer now reuses those interaction logs to hydrate fresh request-time features such as recent topic click share, recent item CTR, and recent user click rate. If no prior serving log bundle exists, those features fall back to explicit zero-valued defaults rather than hidden approximations.
+
+The request-time assembly path now also exposes simple operational controls:
+
+- `max_sources_per_request`
+- `fallback_to_trending_only`
+- `trending_fallback_candidate_count`
+
+When those controls trigger, the response and smoke summary surface `degraded_modes` so fallback behavior is observable rather than implicit.
+
+The serving flow now also performs deterministic request-time experiment assignment using the same hashing strategy as the offline experiment layer. Local API responses, request logs, exposure logs, response logs, and click logs all persist the treatment actually shown to the user.
+
+The repo now also includes a local live-style experiment readout command over those serving logs:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.analyze_live_experiment --config configs/live_experiment_smoke.yaml
+```
+
+That command emits a readout bundle from request-time logs with treatment metrics, SRM, fallback-rate guardrails, degraded-request rates, and sample-size caveats.
+
+The human-readable version of that serving boundary lives in [src/personalization_platform/features/training_vs_serving_contract.md](/Users/hanlingjuan/personalization-experimentation-platform/src/personalization_platform/features/training_vs_serving_contract.md).
 
 The experiment analysis bundle now includes:
 
@@ -175,13 +298,21 @@ The experiment analysis bundle now includes:
 For a richer offline validation slice than the tiny smoke path, the repo also includes a medium fixture path:
 
 ```bash
-PYTHONPATH=src python -m personalization_platform.pipeline.build_event_log --config configs/mind_medium.yaml
-PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_medium.yaml
-PYTHONPATH=src python -m personalization_platform.pipeline.build_ranking_dataset --config configs/ranking_dataset_medium.yaml
-PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_medium.yaml
+bash scripts/ci_medium.sh
 ```
 
 This medium path keeps the same local, reproducible workflow but provides more requests and a larger time-ordered validation holdout for retrieval and ranking diagnostics.
+
+If you want to run the stages individually, the script expands to:
+
+```bash
+PYTHONPATH=src python -m personalization_platform.pipeline.validate_event_log_config --config configs/mind_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_event_log --config configs/mind_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_candidates --config configs/candidates_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.build_ranking_dataset --config configs/ranking_dataset_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.train_ranker --config configs/ranker_medium.yaml
+PYTHONPATH=src python -m personalization_platform.pipeline.compare_rankers --config configs/ranker_compare_medium.yaml
+```
 
 The ranker comparison bundles now include:
 
@@ -208,6 +339,12 @@ with:
 - `project_summary.json`
 
 This command validates that the package, config loader, artifact writing path, and baseline repo structure are wired correctly.
+
+For pipeline stages that emit `manifest.json`, the manifest is intended to be both human-readable and machine-parseable:
+
+- use `run_metadata` to identify the current artifact bundle
+- use `upstream_runs` to trace which earlier runs produced the inputs
+- use `config.yaml` alongside `manifest.json` when comparing repeated runs of the same named workflow
 
 The repo also includes a schema-contract command for the first event-log slice:
 

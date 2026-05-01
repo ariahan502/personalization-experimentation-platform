@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from personalization_platform.evaluation.uncertainty import summarize_mean_delta, summarize_mean_metric
 from personalization_platform.ranking.logistic_baseline import (
     build_request_ranking_metrics,
     train_ranker_model,
@@ -39,6 +40,7 @@ def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, A
             valid_rows,
             variant_name=trained_metrics["model_name"],
             dataset_input_dir=trained_metrics["ranking_dataset_input_dir"],
+            config=config,
         )
 
     if dataset_input_dir is None:
@@ -49,6 +51,7 @@ def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, A
         fallback_rows,
         variant_name="retrieval_order_baseline",
         dataset_input_dir=dataset_input_dir,
+        config=config,
     )
     variant_rows["retrieval_order_baseline"] = fallback_rows
     variant_metrics["retrieval_order_baseline"] = fallback_metrics
@@ -73,6 +76,11 @@ def compare_rankers(config: dict[str, Any]) -> tuple[dict[str, Any], dict[str, A
             for variant_name, metrics in variant_metrics.items()
             if variant_name != "retrieval_order_baseline"
         },
+        "metric_delta_uncertainty": build_metric_delta_uncertainty(
+            candidate_rows=variant_rows[primary_variant_name],
+            baseline_rows=fallback_rows,
+            config=config,
+        ),
     }
     diagnostics = build_diagnostics(
         variant_rows=variant_rows,
@@ -119,12 +127,25 @@ def build_variant_metrics(
     *,
     variant_name: str,
     dataset_input_dir: str,
+    config: dict[str, Any],
 ) -> dict[str, Any]:
+    classification_contributions = build_classification_metric_contributions(rows)
+    ranking_contributions = build_request_metric_contributions(rows)
     return {
         "model_name": variant_name,
         "ranking_dataset_input_dir": dataset_input_dir,
         "classification_metrics": build_score_metrics(rows),
         "ranking_metrics": build_request_ranking_metrics(rows),
+        "uncertainty": {
+            "classification": {
+                metric_name: summarize_mean_metric(values, metric_name=metric_name, config=config)
+                for metric_name, values in classification_contributions.items()
+            },
+            "ranking": {
+                metric_name: summarize_mean_metric(values, metric_name=metric_name, config=config)
+                for metric_name, values in ranking_contributions.items()
+            },
+        },
     }
 
 
@@ -144,6 +165,58 @@ def build_score_metrics(rows: pd.DataFrame) -> dict[str, Any]:
     if y_true.nunique() > 1:
         metrics["roc_auc"] = float(compute_auc(y_true.tolist(), y_score.tolist()))
     return metrics
+
+
+def build_classification_metric_contributions(rows: pd.DataFrame) -> dict[str, list[float]]:
+    y_true = rows["label"].astype(int)
+    y_score = rows["prediction"].astype(float).clip(1e-6, 1 - 1e-6)
+    y_pred = rows["predicted_label"].astype(int)
+    return {
+        "accuracy": (y_true == y_pred).astype(float).tolist(),
+        "log_loss": (-(y_true * y_score.map(math.log) + (1 - y_true) * (1 - y_score).map(math.log))).tolist(),
+    }
+
+
+def build_request_metric_contributions(rows: pd.DataFrame) -> dict[str, list[float]]:
+    contributions = {"mean_reciprocal_rank": [], "hit_rate_at_1": [], "hit_rate_at_3": []}
+    for _, request_rows in rows.groupby("request_id", sort=True):
+        ranked = request_rows.sort_values("prediction", ascending=False).reset_index(drop=True)
+        positives = ranked.index[ranked["label"] == 1].tolist()
+        if positives:
+            best_rank = positives[0] + 1
+            contributions["mean_reciprocal_rank"].append(1.0 / best_rank)
+            contributions["hit_rate_at_1"].append(float(best_rank <= 1))
+            contributions["hit_rate_at_3"].append(float(best_rank <= 3))
+        else:
+            contributions["mean_reciprocal_rank"].append(0.0)
+            contributions["hit_rate_at_1"].append(0.0)
+            contributions["hit_rate_at_3"].append(0.0)
+    return contributions
+
+
+def build_request_metric_contributions_by_request(rows: pd.DataFrame) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for request_id, request_rows in rows.groupby("request_id", sort=True):
+        ranked = request_rows.sort_values("prediction", ascending=False).reset_index(drop=True)
+        positives = ranked.index[ranked["label"] == 1].tolist()
+        if positives:
+            best_rank = positives[0] + 1
+            reciprocal_rank = 1.0 / best_rank
+            hit_at_1 = float(best_rank <= 1)
+            hit_at_3 = float(best_rank <= 3)
+        else:
+            reciprocal_rank = 0.0
+            hit_at_1 = 0.0
+            hit_at_3 = 0.0
+        records.append(
+            {
+                "request_id": request_id,
+                "mean_reciprocal_rank": reciprocal_rank,
+                "hit_rate_at_1": hit_at_1,
+                "hit_rate_at_3": hit_at_3,
+            }
+        )
+    return records
 
 
 def compute_auc(labels: list[int], scores: list[float]) -> float:
@@ -178,6 +251,82 @@ def compute_metric_deltas(*, candidate: dict[str, Any], baseline: dict[str, Any]
     return deltas
 
 
+def build_metric_delta_uncertainty(
+    *,
+    candidate_rows: pd.DataFrame,
+    baseline_rows: pd.DataFrame,
+    config: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    candidate_classification = candidate_rows[
+        ["request_id", "item_id", "label", "prediction", "predicted_label"]
+    ].rename(
+        columns={
+            "prediction": "candidate_prediction",
+            "predicted_label": "candidate_predicted_label",
+        }
+    )
+    baseline_classification = baseline_rows[["request_id", "item_id", "prediction", "predicted_label"]].rename(
+        columns={
+            "prediction": "baseline_prediction",
+            "predicted_label": "baseline_predicted_label",
+        }
+    )
+    merged_rows = candidate_classification.merge(
+        baseline_classification,
+        on=["request_id", "item_id"],
+        how="inner",
+    )
+
+    row_delta_summary = {
+        "classification.accuracy": summarize_mean_delta(
+            merged_rows["candidate_predicted_label"].eq(merged_rows["label"]).astype(float).tolist(),
+            merged_rows["baseline_predicted_label"].eq(merged_rows["label"]).astype(float).tolist(),
+            metric_name="classification.accuracy",
+            config=config,
+            paired=True,
+        ),
+        "classification.log_loss": summarize_mean_delta(
+            (
+                -(
+                    merged_rows["label"] * merged_rows["candidate_prediction"].clip(1e-6, 1 - 1e-6).map(math.log)
+                    + (1 - merged_rows["label"])
+                    * (1 - merged_rows["candidate_prediction"].clip(1e-6, 1 - 1e-6)).map(math.log)
+                )
+            ).tolist(),
+            (
+                -(
+                    merged_rows["label"] * merged_rows["baseline_prediction"].clip(1e-6, 1 - 1e-6).map(math.log)
+                    + (1 - merged_rows["label"])
+                    * (1 - merged_rows["baseline_prediction"].clip(1e-6, 1 - 1e-6)).map(math.log)
+                )
+            ).tolist(),
+            metric_name="classification.log_loss",
+            config=config,
+            paired=True,
+        ),
+    }
+
+    candidate_request = pd.DataFrame(build_request_metric_contributions_by_request(candidate_rows))
+    baseline_request = pd.DataFrame(build_request_metric_contributions_by_request(baseline_rows))
+    merged_request = candidate_request.merge(
+        baseline_request,
+        on="request_id",
+        how="inner",
+        suffixes=("_candidate", "_baseline"),
+    )
+    request_delta_summary = {
+        f"ranking.{metric_name}": summarize_mean_delta(
+            merged_request[f"{metric_name}_candidate"].tolist(),
+            merged_request[f"{metric_name}_baseline"].tolist(),
+            metric_name=f"ranking.{metric_name}",
+            config=config,
+            paired=True,
+        )
+        for metric_name in ("mean_reciprocal_rank", "hit_rate_at_1", "hit_rate_at_3")
+    }
+    return row_delta_summary | request_delta_summary
+
+
 def build_diagnostics(
     *,
     variant_rows: dict[str, pd.DataFrame],
@@ -186,6 +335,7 @@ def build_diagnostics(
     config: dict[str, Any],
 ) -> dict[str, Any]:
     primary_variant_name = comparison_metrics["primary_variant_name"]
+    primary_request_count = comparison_metrics["variants"][primary_variant_name]["ranking_metrics"]["request_count"]
     return {
         "calibration_summary": {
             variant_name: build_calibration_summary(rows) for variant_name, rows in variant_rows.items()
@@ -206,6 +356,7 @@ def build_diagnostics(
             "The fallback baseline uses retrieval order only, scored as inverse merged rank.",
             "The comparison bundle can score multiple model families against the same valid split and retrieval-order fallback.",
             "Request-level segments are defined on cold-start status and history depth so ranking behavior can be inspected beyond one aggregate metric.",
+            f"The primary-vs-fallback interval summaries are bootstrapped over {primary_request_count} valid requests for ranking metrics, so small point deltas should be treated cautiously.",
             "Offline gains on a local validation slice should be treated as directional evidence, not shipment evidence.",
         ],
         "baseline_feature_manifest": variant_manifests.get("logistic_regression_baseline", {}).get(
@@ -214,6 +365,7 @@ def build_diagnostics(
         )[:5],
         "primary_variant_manifest": variant_manifests.get(primary_variant_name, {}),
         "metric_deltas": comparison_metrics["metric_deltas"],
+        "metric_delta_uncertainty": comparison_metrics["metric_delta_uncertainty"],
     }
 
 

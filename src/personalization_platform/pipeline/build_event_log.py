@@ -11,7 +11,7 @@ from personalization_platform.data.mind_event_log import (
     build_manifest,
     build_run_metrics,
 )
-from personalization_platform.utils.artifacts import create_run_dir, write_json, write_yaml
+from personalization_platform.utils.artifacts import attach_lineage, create_run_dir, write_json, write_yaml
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -39,7 +39,12 @@ def main() -> None:
         table.to_csv(output_dir / f"{table_name}.csv", index=False)
 
     metrics = build_run_metrics(tables)
-    manifest = build_manifest(config=config, metrics=metrics, output_dir=output_dir)
+    manifest = attach_lineage(
+        build_manifest(config=config, metrics=metrics, output_dir=output_dir),
+        run_dir=run_dir,
+        output_dir=output_dir,
+        config=config,
+    )
 
     write_yaml(run_dir / "config.yaml", config)
     write_json(run_dir / "metrics.json", metrics)
