@@ -6,6 +6,7 @@ Validation tiers:
 
 - `bash scripts/ci_smoke.sh` is the fastest whole-repo health check
 - `bash scripts/ci_medium.sh` is the richer retrieval-and-ranking validation path
+- `bash scripts/ci_simulated_live.sh` is the stronger treatment-and-lifecycle validation path
 - medium validation should be the default follow-up after substantive retrieval or ranking changes
 
 Planned config families:
@@ -87,3 +88,7 @@ It analyzes the latest `local_api_smoke` serving logs and emits treatment metric
 The lifecycle config then combines the latest ranker, ranker comparison, offline monitoring, and live-style experiment readout bundles to emit an explicit `promote`, `hold`, or `rollback` recommendation plus fallback guidance.
 
 The simulated-live configs add a stronger validation tier: they build a deterministic serving-log bundle from reranked outputs with fixed seeds, then run the same live readout and lifecycle logic on top of that larger replay-style sample.
+
+The recommended command for that tier is:
+
+- `bash scripts/ci_simulated_live.sh`

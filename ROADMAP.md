@@ -45,10 +45,13 @@ This pattern is used across event-log preparation, retrieval, ranking, reranking
 - Deterministic request-time experiment assignment and treatment-aware exposure logging
 - Live-style experiment readout over serving logs with SRM and fallback guardrails
 - Lifecycle readiness bundle with explicit promote, hold, and rollback guidance tied to offline monitoring and serving-log guardrails
+- Deterministic simulated-live validation tier that generates balanced serving-log treatments from reranked outputs with fixed seeds
+- Paired treatment replay for lower-variance treatment comparison and more credible lifecycle decisions on local validation traffic
 - Portfolio-facing reporting bundle and architecture note
 - Targeted stage-level tests plus GitHub Actions CI
 - One-command smoke validation via `bash scripts/ci_smoke.sh`
 - One-command medium retrieval and ranking validation via `bash scripts/ci_medium.sh`
+- One-command simulated-live validation via `bash scripts/ci_simulated_live.sh`
 - Containerized runtime path for smoke and medium validation
 
 ## Roadmap Status
@@ -75,6 +78,7 @@ The extension phase is also complete for the current scope:
 - more realistic serving/demo behavior
 
 The remaining roadmap beyond this point is production-oriented expansion rather than missing offline baseline components.
+The main remaining work is no longer wiring the experimentation stack together; it is improving policy quality, evidence realism, and the strength of validation claims.
 
 ## Next Expansion Opportunities
 
@@ -108,6 +112,8 @@ Validation:
 - each new model still compares against the simpler fallback path
 - metrics remain reproducible from config-backed runs
 
+Status: this is now the highest-value technical frontier. The stronger simulated-live tier makes it easier to tell whether reranking changes are actually helping versus only looking plausible in tiny smoke samples.
+
 ### 3. Engineering Hardening
 
 Improve maintainability and environment reproducibility.
@@ -140,6 +146,8 @@ Validation:
 
 - the repo remains easy to understand for a new reader
 - the reporting bundle continues to reflect real artifact outputs
+
+Status: mostly complete, with the main remaining need being continued alignment between the repo-facing docs and the newer simulated-live / lifecycle evaluation tier.
 
 ## Phase Exit Criteria
 

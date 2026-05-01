@@ -19,6 +19,7 @@ The current raw interaction source is `MIND`, the Microsoft News Dataset. In thi
 - extension phase complete for the current repo scope: richer validation data, deeper retrieval, multiple ranker families, segmented diagnostics, stronger experiment readout, targeted tests, CI, and contextual API scoring
 - fastest validation path: `bash scripts/ci_smoke.sh`
 - richer retrieval-and-ranking validation path: `bash scripts/ci_medium.sh`
+- strongest local treatment-and-lifecycle validation path: `bash scripts/ci_simulated_live.sh`
 - production boundary: this repo is an offline experimentation platform and local demo surface, not a production recommender stack
 
 ## Process
@@ -54,6 +55,7 @@ The current highest-signal local commands are:
 ```bash
 bash scripts/ci_smoke.sh
 bash scripts/ci_medium.sh
+bash scripts/ci_simulated_live.sh
 PYTHONPATH=src python -m personalization_platform.pipeline.serve_ranked_feed --config configs/local_api.yaml
 PYTHONPATH=src python -m personalization_platform.pipeline.build_portfolio_report --config configs/portfolio_report_smoke.yaml
 ```
@@ -93,6 +95,8 @@ Beyond the first end-to-end baseline, the repo now also includes:
 - explicit request-time assembly controls for source budgets, trending-only fallback, and degraded-mode observability
 - deterministic request-time experiment assignment with treatment metadata persisted in serving responses and logs
 - live-style experiment readout over serving logs, including SRM, concentration, fallback rate, and degraded request rate
+- a deterministic simulated-live validation tier that replays balanced treatment traffic from reranked outputs with fixed seeds
+- lifecycle evaluation over both local serving smoke logs and stronger simulated-live serving logs
 
 ## Repository Layout
 
@@ -227,8 +231,6 @@ The default serving smoke requests intentionally span multiple users and both ex
 For a stronger synthetic-live validation tier, the repo also includes a deterministic replay simulation that generates larger serving-log bundles directly from `reranked_rows.csv` with fixed seeds and no dependency on prior `local_api_smoke` artifacts.
 
 The reranking policy now also supports a prediction guard margin so freshness and diversity logic can promote plausible alternatives without letting very weak candidates leapfrog obvious high-score winners.
-- local API replay and contextual scoring
-- portfolio reporting bundle
 
 If you changed retrieval, ranking, or evaluation logic and want a richer offline check, run:
 
@@ -246,6 +248,27 @@ This medium validation script focuses on the ranking stack:
 - medium multi-model comparison diagnostics
 
 Use `ci_smoke.sh` as the fastest repo health check and `ci_medium.sh` as the default follow-up after substantive retrieval or ranking changes.
+
+If you changed reranking, serving behavior, live-readout logic, or lifecycle decision thresholds and want the strongest local validation tier, run:
+
+```bash
+bash scripts/ci_simulated_live.sh
+```
+
+This simulated-live validation script focuses on treatment comparison and decision quality:
+
+- compile and test the repo
+- rebuild the smoke ranking and reranking path
+- generate deterministic serving logs directly from reranked outputs
+- replay balanced treatment traffic with fixed seeds
+- run the same live experiment readout used by the serving smoke flow
+- evaluate lifecycle promotion, hold, and rollback guidance on the larger simulated sample
+
+The validation tiers are intentionally different:
+
+- `ci_smoke.sh` checks the whole repo quickly, including local API smoke and reporting
+- `ci_medium.sh` strengthens offline retrieval and ranking evaluation
+- `ci_simulated_live.sh` strengthens treatment comparison and lifecycle evidence with a larger deterministic replay
 
 For a smaller demo flow after the smoke run succeeds:
 

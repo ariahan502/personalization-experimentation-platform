@@ -23,7 +23,7 @@ These fields come from the generated ranking dataset bundle, not from a live ser
 
 ## Serving Surface
 
-The local API exposes two explicit modes:
+The local API exposes three explicit modes:
 
 - `fixture_replay`
 - `contextual_scoring`
@@ -73,3 +73,5 @@ These are not approximated by the serving API today.
 The current local API is useful for smoke validation and request-shape design, but it is not yet a production parity surface for the offline ranker.
 
 The serving smoke workflow now also writes local request, exposure, response, and click log files so future experiment assignment and offline rebuild work can consume a serving-originated interaction surface instead of only replay artifacts.
+
+The repo now also includes a separate simulated-live validation tier that generates larger deterministic serving logs directly from reranked outputs with fixed seeds. That tier is intentionally stronger than the tiny local API smoke flow and does not depend on prior `local_api_smoke` bundles for its treatment-comparison evidence.
